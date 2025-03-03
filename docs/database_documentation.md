@@ -10,8 +10,7 @@
 
 ## Overview
 
-This database schema is designed to store genetic variants from VCF files, along with their frequencies across different collections (populations), while also enabling queries based on gene symbols. The schema follows proper normalization principles to minimize redundancy while maintaining data integrity.
-
+This database schema is designed to store genetic variants from VCF files, along with their frequencies across different collections (populations), while also enabling queries based on gene symbols.
 ## Database E/R Diagram
 
 ![Database e/r diagram](er_schema.png "Title")
@@ -65,7 +64,7 @@ Stores gene information.
 |--------|------|-------------|
 | id | integer | Primary key |
 | symbol | text | Gene symbol (e.g., "BRCA1") |
-| description | text | Description of the gene |
+| description | text | Description of the gene (when given)|
 
 ### 6. gene_positions
 Junction table that connects genes to genomic positions.
@@ -82,16 +81,16 @@ Junction table that connects genes to genomic positions.
 A position can have multiple variants. This happens because at a single genomic position, there can be multiple possible alternate alleles. For instance, at position chr1:1000, the reference allele might be "A", but we could observe variants with "G", "T", or "C" alternate alleles.
 
 ### variants ↔ variants_frequencies (1:N)
-A variant can have frequency data in multiple collections. This relationship allows us to track how common a particular variant is across different populations or sample groups.
+A variant can have frequency data in multiple collections. This relationship allows us to track how common a particular variant is across different populations or sample groups (different collections may have different frequencies).
 
 ### collections ↔ variants_frequencies (1:N)
-A collection can contain frequency data for many variants. This relationship allows us to query all variants within a specific population or sample group.
+A collection can contain frequency data for many variants. This relationship allows us to keep track of the different allele frequencies per variant and sample.
 
 ### genes ↔ gene_positions (1:N)
-A gene can span many positions in the genome. Genes can be quite large, covering thousands or even millions of base pairs.
+A gene can span many positions in the genome.
 
 ### positions ↔ gene_positions (1:N)
-A position can be associated with multiple genes. This accounts for overlapping genes or cases where a single position might be relevant to multiple genes.
+A position can be associated with multiple genes. This accounts for overlapping genes.
 
 ## Sample Queries
 

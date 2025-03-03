@@ -1,7 +1,7 @@
 import os.path
 import psycopg2
 import glob
-from arg_parser import setup_args
+from vcf2db_cli import setup_args
 from utils.dbutils import create_database, create_tables, insert_position, insert_variant
 import pysam
 import logging

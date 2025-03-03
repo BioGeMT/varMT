@@ -4,26 +4,36 @@ import glob
 from arg_parser import setup_args
 from utils.dbutils import create_database, create_tables, insert_position, insert_variant
 import pysam
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 
 def process_data(vcf_path, db_name, db_user, db_password, db_host):
-    print("Trying to process data")
+    logging.info("Trying to process data")
     conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_password, host=db_host)
 
     try:
         if os.path.isdir(vcf_path):
             vcf_files = glob.glob(os.path.join(vcf_path, "*.vcf"))
-            print(f"Found these VCF files: {vcf_files}")
+            logging.info(f"Found these VCF files: {vcf_files}")
         else:
             vcf_files = [vcf_path]
 
-        print(f"Found {len(vcf_files)} VCF files to process")
+        logging.info(f"Found {len(vcf_files)} VCF files to process")
 
         for vcf_file in vcf_files:
             cur = conn.cursor()  # Create cursor per file
 
             try:
-                print(f"Processing {vcf_file}...")
+                logging.info(f"Processing {vcf_file}...")
                 vcf = pysam.VariantFile(vcf_file, 'r')
 
                 for record in vcf:
@@ -45,7 +55,7 @@ def process_data(vcf_path, db_name, db_user, db_password, db_host):
 
             except Exception as e:
                 conn.rollback()  # Rollback on error
-                print(f"Error processing {vcf_file}: {e}")
+                logging.error(f"Error processing {vcf_file}: {e}")
                 raise
             finally:
                 cur.close()

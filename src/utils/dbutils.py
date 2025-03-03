@@ -1,19 +1,29 @@
 import psycopg2
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 def create_database(dbname, user, password, host):
-    print("Creating database...")
+    logger.info("Creating database...")
     conn = psycopg2.connect(dbname='postgres', user=user, password=password, host=host)
     conn.autocommit = True
     cur = conn.cursor()
-    #cur.execute("DROP DATABASE IF EXISTS " + dbname)
+    cur.execute("DROP DATABASE IF EXISTS " + dbname)
     cur.execute("CREATE DATABASE " + dbname)
     cur.close()
     conn.close()
 
-    print("Created database correctly")
+    logger.info("Database created correctly")
 
 def create_tables(dbname, user, password, host):
-    print("Creating tables...")
+    logger.info("Creating tables...")
     conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host)
 
     cur = conn.cursor()
@@ -45,7 +55,7 @@ def create_tables(dbname, user, password, host):
     cur.close()
     conn.close()
 
-    print("Created tables correctly")
+    logger.info("Tables created correctly")
 
 
 def insert_variant():

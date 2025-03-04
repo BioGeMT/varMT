@@ -2,7 +2,7 @@
 
 ## Table of Contents
 - [Overview](#overview)
-- [Database Schema Diagram](#database-schema-diagram)
+- [E/R Diagram](#er-diagram)
 - [Table Descriptions](#table-descriptions)
 - [Relationship Explanations](#relationship-explanations)
 - [Sample Queries](#sample-queries)
@@ -10,7 +10,7 @@
 ## Overview
 
 This database schema is designed to store genetic variants from VCF files, along with their frequencies across different collections (populations), while also enabling queries based on gene symbols.
-## Database E/R Diagram
+## E/R Diagram
 
 ![Database e/r diagram](ERschema.png "Title")
 

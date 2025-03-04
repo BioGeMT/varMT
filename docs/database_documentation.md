@@ -5,7 +5,6 @@
 - [Database Schema Diagram](#database-schema-diagram)
 - [Table Descriptions](#table-descriptions)
 - [Relationship Explanations](#relationship-explanations)
-- [Special Considerations](#special-considerations)
 - [Sample Queries](#sample-queries)
 
 ## Overview

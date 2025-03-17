@@ -16,7 +16,7 @@ This database schema is designed to store genetic variants from VCF files, along
 
 ## Table Descriptions
 
-### 1. positions
+### 1. variant_locations
 Stores the genomic coordinates where variants occur.
 
 | Column | Type | Description |
@@ -26,6 +26,7 @@ Stores the genomic coordinates where variants occur.
 | start_position | integer | Start coordinate of the variant |
 | end_position | integer | End coordinate of the variant |
 | reference_allele | text | Reference sequence at this position |
+| genome_version | text | Reference genome build/version (e.g., "GRCh38") |
 
 ### 2. variants
 Stores the actual genetic variants.

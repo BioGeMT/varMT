@@ -29,26 +29,65 @@ def create_tables(dbname, user, password, host):
     cur = conn.cursor()
 
     cur.execute("""
-                CREATE TABLE positions(
+                CREATE TABLE variant_locations(
                     id SERIAL PRIMARY KEY,
                     chromosome TEXT NOT NULL,
                     start_position INTEGER NOT NULL,
                     end_position INTEGER NOT NULL,
-                    reference TEXT NOT NULL,
-                    UNIQUE (chromosome, start_position, end_position, reference)
-                )
+                    reference_allele TEXT NOT NULL,
+                    genome_version TEXT NOT NULL,
+                    UNIQUE (chromosome, start_position, end_position, reference_allele, genome_version)
+                );
                 """)
 
     cur.execute("""
             CREATE TABLE variants(
                 id SERIAL PRIMARY KEY,
-                position_id INTEGER NOT NULL,
+                variant_location_id INTEGER NOT NULL,
                 rs_id TEXT,
-                alternate TEXT NOT NULL,
-                count INTEGER NOT NULL,
-                FOREIGN KEY (position_id) REFERENCES positions (id),
-                UNIQUE (position_id, alternate)
-            )
+                alternate_allele TEXT NOT NULL,
+                FOREIGN KEY (variant_location_id) REFERENCES variant_locations (id),
+                UNIQUE (variant_location_id, alternate_allele)
+            );
+            """)
+    
+    cur.execute("""
+            CREATE TABLE collections(
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                UNIQUE (name)
+            );
+            """)
+    
+    cur.execute("""
+            CREATE TABLE variants_frequencies(
+                id SERIAL PRIMARY KEY,
+                variant_id INTEGER NOT NULL,
+                collection_id INTEGER NOT NULL,
+                alternate_allele_count INTEGER NOT NULL,
+                FOREIGN KEY (variant_id) REFERENCES variants (id),
+                FOREIGN KEY (collection_id) REFERENCES collections (id)
+            );
+            """)
+    
+    cur.execute("""
+            CREATE TABLE genes(
+                id SERIAL PRIMARY KEY,
+                symbol TEXT NOT NULL,
+                description TEXT,
+                UNIQUE (symbol)
+            );
+            """)
+    
+    cur.execute("""
+            CREATE TABLE genes_locations(
+                id SERIAL PRIMARY KEY,
+                gene_id INTEGER NOT NULL,
+                variant_location_id INTEGER NOT NULL,
+                FOREIGN KEY (gene_id) REFERENCES genes (id),
+                FOREIGN KEY (variant_location_id) REFERENCES variant_locations (id),
+                UNIQUE (gene_id, variant_location_id)
+            );
             """)
 
     conn.commit()

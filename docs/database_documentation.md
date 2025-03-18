@@ -34,7 +34,7 @@ Stores the actual genetic variants.
 | Column | Type | Description |
 |--------|------|-------------|
 | id | integer | Primary key |
-| position_id | integer | Foreign key to positions table |
+| variant_location_id | integer | Foreign key to positions table |
 | rs_id | text | dbSNP reference SNP ID (when available) |
 | alternate_allele | text | Alternate sequence at this position |
 
@@ -73,7 +73,7 @@ Junction table that connects genes to genomic positions.
 |--------|------|-------------|
 | id | integer | Primary key |
 | gene_id | integer | Foreign key to genes table |
-| position_id | integer | Foreign key to positions table |
+| variant_location_id | integer | Foreign key to positions table |
 
 ## Relationship Explanations
 

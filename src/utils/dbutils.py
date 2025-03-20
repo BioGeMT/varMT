@@ -54,13 +54,12 @@ def create_tables(dbname, user, password, host):
     cur.execute("""
             CREATE TABLE collections(
                 id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL,
-                UNIQUE (name)
+                sample_count INTEGER NOT NULL,
             );
             """)
     
     cur.execute("""
-            CREATE TABLE variants_frequencies(
+            CREATE TABLE variant_frequencies(
                 id SERIAL PRIMARY KEY,
                 variant_id INTEGER NOT NULL,
                 collection_id INTEGER NOT NULL,
@@ -74,13 +73,12 @@ def create_tables(dbname, user, password, host):
             CREATE TABLE genes(
                 id SERIAL PRIMARY KEY,
                 symbol TEXT NOT NULL,
-                description TEXT,
                 UNIQUE (symbol)
             );
             """)
     
     cur.execute("""
-            CREATE TABLE genes_locations(
+            CREATE TABLE gene_locations(
                 id SERIAL PRIMARY KEY,
                 gene_id INTEGER NOT NULL,
                 variant_location_id INTEGER NOT NULL,

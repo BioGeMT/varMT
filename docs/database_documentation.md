@@ -44,10 +44,9 @@ Stores information about different sample collections/populations.
 | Column | Type | Description |
 |--------|------|-------------|
 | id | integer | Primary key |
-| name | text | Name of the collection |
 | sample_count | integer | Number of individual samples in this collection |
 
-### 4. variants_frequencies
+### 4. variant_frequencies
 Junction table that stores the frequency data for variants across different collections.
 
 | Column | Type | Description |
@@ -64,9 +63,8 @@ Stores gene information.
 |--------|------|-------------|
 | id | integer | Primary key |
 | symbol | text | Gene symbol (e.g., "BRCA1") |
-| description | text | Description of the gene (when given)|
 
-### 6. gene_positions
+### 6. gene_locations
 Junction table that connects genes to genomic positions.
 
 | Column | Type | Description |
@@ -77,8 +75,8 @@ Junction table that connects genes to genomic positions.
 
 ## Relationship Explanations
 
-### positions ↔ variants (1:N)
-A position can have multiple variants. This happens because at a single genomic position, there can be multiple possible alternate alleles. For instance, at position chr1:1000, the reference allele might be "A", but we could observe variants with "G", "T", or "C" alternate alleles.
+### variant_locations ↔ variants (1:N)
+A location can have multiple variants. This happens because at a single genomic position, there can be multiple possible alternate alleles. For instance, at position chr1:1000, the reference allele might be "A", but we could observe variants with "G", "T", or "C" alternate alleles.
 
 ### variants ↔ variants_frequencies (1:N)
 A variant can have frequency data in multiple collections. This relationship allows us to track how common a particular variant is across different populations or sample groups (different collections may have different frequencies).

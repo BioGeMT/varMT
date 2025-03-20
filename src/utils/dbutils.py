@@ -54,7 +54,7 @@ def create_tables(dbname, user, password, host):
     cur.execute("""
             CREATE TABLE collections(
                 id SERIAL PRIMARY KEY,
-                sample_count INTEGER NOT NULL,
+                sample_count INTEGER NOT NULL
             );
             """)
     

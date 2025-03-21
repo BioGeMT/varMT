@@ -32,11 +32,10 @@ def create_tables(dbname, user, password, host):
                 CREATE TABLE variant_locations(
                     id SERIAL PRIMARY KEY,
                     chromosome TEXT NOT NULL,
-                    start_position INTEGER NOT NULL,
-                    end_position INTEGER NOT NULL,
+                    position INTEGER NOT NULL,
                     reference_allele TEXT NOT NULL,
                     genome_version TEXT NOT NULL,
-                    UNIQUE (chromosome, start_position, end_position, reference_allele, genome_version)
+                    UNIQUE (chromosome, position, reference_allele, genome_version)
                 );
                 """)
 
@@ -97,17 +96,45 @@ def create_tables(dbname, user, password, host):
 
 def insert_variant():
     variant_insert_query = """
-                            INSERT INTO variants(position_id, rs_id, alternate, count)
-                            VALUES (%s, %s, %s, %s)
+                            INSERT INTO variants(variant_location_id, rs_id, alternate_allele)
+                            VALUES (%s, %s, %s)
+                            RETURNING id
             """
     return variant_insert_query
 
-def insert_position():
-    position_insert_query = """
-                            INSERT INTO positions (chromosome, start_position, end_position, reference)
+def insert_variant_location():
+    variant_location_insert_query = """
+                            INSERT INTO variant_locations (chromosome, position, reference_allele, genome_version)
                             VALUES (%s, %s, %s, %s)
-                            ON CONFLICT (chromosome, start_position, end_position, reference) 
-                            DO UPDATE SET chromosome = EXCLUDED.chromosome
                             RETURNING id
     """
-    return position_insert_query
+    return variant_location_insert_query
+
+def insert_collection():
+    collection_insert_query = """
+                            INSERT INTO collections (sample_count)
+                            VALUES (%s)
+                            RETURNING id
+                            """
+    return collection_insert_query
+
+def insert_variant_frequency():
+    variant_frequency_insert_query = """
+                            INSERT INTO variant_frequencies (variant_id, collection_id, alternate_allele_count)
+                            VALUES (%s, %s, %s)
+                            """
+    return variant_frequency_insert_query
+
+def insert_gene():
+    gene_insert_query = """
+                            INSERT INTO genes (symbol)
+                            VALUES (%s)
+                        """
+    return gene_insert_query
+
+def insert_gene_location():
+    gene_location_insert_query = """
+                            INSERT INTO gene_locations (gene_id, variant_location_id)
+                            VALUES (%s, %s)
+                            """
+    return gene_location_insert_query

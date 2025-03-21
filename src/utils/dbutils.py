@@ -109,6 +109,7 @@ def insert_variant_location():
                             INSERT INTO variant_locations (chromosome, position, reference_allele, genome_version)
                             VALUES (%s, %s, %s, %s)
                             ON CONFLICT (chromosome, position, reference_allele, genome_version)
+                            DO UPDATE SET id = variant_locations.id
                             RETURNING id
     """
     return variant_location_insert_query
@@ -125,6 +126,8 @@ def insert_variant_frequency():
     variant_frequency_insert_query = """
                             INSERT INTO variant_frequencies (variant_id, collection_id, alternate_allele_count)
                             VALUES (%s, %s, %s)
+                            ON CONFLICT (variant_id, collection_id)
+                            DO UPDATE SET alternate_allele_count = variant_frequencies.alternate_allele_count + EXCLUDED.alternate_allele_count
                             """
     return variant_frequency_insert_query
 
@@ -143,7 +146,6 @@ def insert_gene_location():
                             INSERT INTO gene_locations (gene_id, variant_location_id)
                             VALUES (%s, %s)
                             ON CONFLICT (gene_id, variant_location_id)
-                            DO UPDATE SET id = gene_locations.id
-                            RETURNING id
+                            DO NOTHING
                             """
     return gene_location_insert_query

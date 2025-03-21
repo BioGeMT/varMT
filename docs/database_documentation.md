@@ -23,8 +23,7 @@ Stores the genomic coordinates where variants occur.
 |--------|------|-------------|
 | id | integer | Primary key |
 | chromosome | text | Chromosome identifier (e.g., "chr1") |
-| start_position | integer | Start coordinate of the variant |
-| end_position | integer | End coordinate of the variant |
+| position | integer | Coordinate of the variant |
 | reference_allele | text | Reference sequence at this position |
 | genome_version | text | Reference genome build/version (e.g., "GRCh38") |
 

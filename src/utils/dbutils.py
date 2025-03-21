@@ -96,8 +96,10 @@ def create_tables(dbname, user, password, host):
 
 def insert_variant():
     variant_insert_query = """
-                            INSERT INTO variants(variant_location_id, rs_id, alternate_allele)
+                            INSERT INTO variants (variant_location_id, rs_id, alternate_allele)
                             VALUES (%s, %s, %s)
+                            ON CONFLICT (variant_location_id, alternate_allele)
+                            DO UPDATE SET id = variants.id
                             RETURNING id
             """
     return variant_insert_query
@@ -106,6 +108,7 @@ def insert_variant_location():
     variant_location_insert_query = """
                             INSERT INTO variant_locations (chromosome, position, reference_allele, genome_version)
                             VALUES (%s, %s, %s, %s)
+                            ON CONFLICT (chromosome, position, reference_allele, genome_version)
                             RETURNING id
     """
     return variant_location_insert_query
@@ -129,6 +132,9 @@ def insert_gene():
     gene_insert_query = """
                             INSERT INTO genes (symbol)
                             VALUES (%s)
+                            ON CONFLICT (symbol)
+                            DO UPDATE SET id = genes.id
+                            RETURNING id
                         """
     return gene_insert_query
 
@@ -136,5 +142,8 @@ def insert_gene_location():
     gene_location_insert_query = """
                             INSERT INTO gene_locations (gene_id, variant_location_id)
                             VALUES (%s, %s)
+                            ON CONFLICT (gene_id, variant_location_id)
+                            DO UPDATE SET id = gene_locations.id
+                            RETURNING id
                             """
     return gene_location_insert_query

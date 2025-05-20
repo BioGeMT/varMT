@@ -17,4 +17,6 @@ def setup_args():
     parser.add_argument("-t", "--tables", action="store_true", help="Create the tables in the database.", required=False)
     parser.add_argument("-i", "--insert", action="store_true", help="Insert the data inside the tables", required=False)
 
+    parser.add_argument("-v", "--vcf", help="Path to the VCF file.", required=True)
+
     return parser.parse_args()

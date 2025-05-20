@@ -2,7 +2,7 @@ import os.path
 import psycopg2
 import glob
 from vcf2db_cli import setup_args
-from utils.dbutils import create_database, create_tables, insert_position, insert_variant
+from utils.dbutils import *
 import pysam
 import logging
 
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 def process_data(vcf_path, db_name, db_user, db_password, db_host):
     logging.info("Trying to process data")
     conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_password, host=db_host)
+    logging.info("Connected to the database")
 
     try:
         if os.path.isdir(vcf_path):
@@ -27,34 +28,50 @@ def process_data(vcf_path, db_name, db_user, db_password, db_host):
         else:
             vcf_files = [vcf_path]
 
-        logging.info(f"Found {len(vcf_files)} VCF files to process")
+        logging.info(f"Found {len(vcf_files)} VCF files to process: {vcf_files}")
 
         for vcf_file in vcf_files:
-            cur = conn.cursor()  # Create cursor per file
+            cur = conn.cursor()
 
             try:
                 logging.info(f"Processing {vcf_file}...")
                 vcf = pysam.VariantFile(vcf_file, 'r')
 
+                cur.execute(insert_collection(), (1,))
+                collection_id = cur.fetchone()[0]
+
                 for record in vcf:
                     chromosome = record.chrom
-                    start_position = record.pos
-                    end_position = start_position + len(record.ref) - 1
+                    position = record.pos
                     reference = record.ref
+                    gene_symbols = record.info.get('CSQ', None)
 
-                    cur.execute(insert_position(), (chromosome, start_position, end_position, reference))
-                    position_id = cur.fetchone()[0]
+                    cur.execute(insert_variant_location(), (chromosome, position, reference, "GRCh38"))
+                    var_location_id = cur.fetchone()[0]
 
-                    for alt_allele in record.alts:
+                    for symbol in gene_symbols: # a single variant can be associated with multiple genes
+                        cur.execute(insert_gene(), (symbol,))
+                        gene_id = cur.fetchone()[0]
+                        cur.execute(insert_gene_location(), (gene_id, var_location_id))
+
+                    for i, alt_allele in enumerate(record.alts):
                         rs_id = record.id if record.id else None
-                        allele_count = record.info.get('AC', [1])[0]
-                        cur.execute(insert_variant(), (position_id, rs_id, alt_allele, allele_count))
+
+                        cur.execute(insert_variant(), (var_location_id, rs_id, alt_allele))
+                        variant_id = cur.fetchone()[0]
+
+                        if isinstance(record.info['AC'], tuple) and len(record.info['AC']) > i:
+                            allele_count = record.info['AC'][i]
+                        else:
+                            allele_count = record.info['AC'][0]
+
+                        cur.execute(insert_variant_frequency(), (variant_id, collection_id, allele_count))
 
                 vcf.close()
                 conn.commit()
 
             except Exception as e:
-                conn.rollback()  # Rollback on error
+                conn.rollback()
                 logging.error(f"Error processing {vcf_file}: {e}")
                 raise
             finally:
@@ -72,8 +89,7 @@ def main():
         create_tables(dbname=args.database, user=args.username, password=args.password, host=args.host)
 
     if args.insert:
-        process_data('../data/',
-                    args.database, args.username, args.password, args.host)
+        process_data(vcf_path=args.vcf, db_name=args.database, db_user=args.username, db_password=args.password, db_host=args.host)
 
 if __name__ == '__main__':
     main()

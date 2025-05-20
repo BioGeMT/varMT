@@ -64,7 +64,8 @@ def create_tables(dbname, user, password, host):
                 collection_id INTEGER NOT NULL,
                 alternate_allele_count INTEGER NOT NULL,
                 FOREIGN KEY (variant_id) REFERENCES variants (id),
-                FOREIGN KEY (collection_id) REFERENCES collections (id)
+                FOREIGN KEY (collection_id) REFERENCES collections (id),
+                UNIQUE (variant_id, collection_id)
             );
             """)
     

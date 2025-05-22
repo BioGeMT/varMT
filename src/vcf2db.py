@@ -44,7 +44,7 @@ def process_data(vcf_path, db_name, db_user, db_password, db_host):
                     chromosome = record.chrom
                     position = record.pos
                     reference = record.ref
-                    gene_symbols = record.info.get('CSQ', None)
+                    gene_symbols = record.info.get('CSQ', None) #TODO this may vary depending on the annotation process
 
                     cur.execute(insert_variant_location(), (chromosome, position, reference, "GRCh38"))
                     var_location_id = cur.fetchone()[0]

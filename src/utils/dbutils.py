@@ -15,8 +15,8 @@ def create_database(dbname, user, password, host):
     conn = psycopg2.connect(dbname='postgres', user=user, password=password, host=host)
     conn.autocommit = True
     cur = conn.cursor()
-    cur.execute("DROP DATABASE IF EXISTS " + dbname)
-    cur.execute("CREATE DATABASE " + dbname)
+    cur.execute(f"DROP DATABASE IF EXISTS {dbname}")
+    cur.execute(f"CREATE DATABASE {dbname}")
     cur.close()
     conn.close()
 

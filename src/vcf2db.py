@@ -34,7 +34,7 @@ def process_data(vcf_path, db_name, db_user, db_password, db_host):
             cur = conn.cursor()
 
             try:
-                logging.info(f"Processing {vcf_file}...")
+                logging.info(f"Processing {vcf_file}")
                 vcf = pysam.VariantFile(vcf_file, 'r')
 
                 cur.execute(insert_collection(), (1,))

@@ -23,7 +23,7 @@ def process_data(vcf_path, db_name, db_user, db_password, db_host):
 
     try:
         if os.path.isdir(vcf_path):
-            vcf_files = glob.glob(os.path.join(vcf_path, "*.vcf"))
+            vcf_files = sorted(glob.glob(os.path.join(vcf_path, "*.vcf")))
             logging.info(f"Found these VCF files: {vcf_files}")
         else:
             vcf_files = [vcf_path]

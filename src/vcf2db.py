@@ -2,7 +2,7 @@ import os.path
 import psycopg2
 import glob
 from vcf2db_cli import setup_args
-from utils.dbutils import *
+from utils.db_utils import *
 import pysam
 import logging
 

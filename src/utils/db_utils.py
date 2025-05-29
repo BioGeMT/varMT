@@ -10,7 +10,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def create_database(dbname, user, password, host):
+def create_database(dbname: str, user: str, password: str, host: str):
+    """
+    Creates a PostgreSQL database with the specified name.
+    If the database already exists, it will be dropped and recreated.
+
+    Args:
+        dbname (str): Name of the database to create.
+        user (str): PostgreSQL user name.
+        password (str): PostgreSQL user password.
+        host (str): PostgreSQL host name.
+        
+    Returns:
+        None
+    """
     logger.info("Creating database...")
     conn = psycopg2.connect(dbname='postgres', user=user, password=password, host=host)
     conn.autocommit = True
@@ -22,7 +35,19 @@ def create_database(dbname, user, password, host):
 
     logger.info("Database created correctly")
 
-def create_tables(dbname, user, password, host):
+def create_tables(dbname: str, user: str, password: str, host: str):
+    """
+    Create the necessary tables in the PostgreSQL database.
+
+    Args:
+        dbname (str): Name of the database.
+        user (str): PostgreSQL user name.
+        password (str): PostgreSQL user password.
+        host (str): PostgreSQL host name.
+
+    Returns:
+        None
+    """
     logger.info("Creating tables...")
     conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host)
 
@@ -96,43 +121,58 @@ def create_tables(dbname, user, password, host):
 
 
 def insert_variant():
+    """
+    Returns the SQL query string for inserting or updating a variant in the 'variants' table.
+    """
     variant_insert_query = """
                             INSERT INTO variants (variant_location_id, rs_id, alternate_allele)
                             VALUES (%s, %s, %s)
                             ON CONFLICT (variant_location_id, alternate_allele)
                             DO UPDATE SET id = variants.id
                             RETURNING id
-            """
+                        """
     return variant_insert_query
 
 def insert_variant_location():
+    """
+    Returns the SQL query string for inserting or updating a variant location in the 'variant_locations' table.
+    """
     variant_location_insert_query = """
                             INSERT INTO variant_locations (chromosome, position, reference_allele, genome_version)
                             VALUES (%s, %s, %s, %s)
                             ON CONFLICT (chromosome, position, reference_allele, genome_version)
                             DO UPDATE SET id = variant_locations.id
                             RETURNING id
-    """
+                        """
     return variant_location_insert_query
 
 def insert_collection():
+    """
+    Returns the SQL query string for inserting a new collection in the 'collections' table.
+    """
     collection_insert_query = """
                             INSERT INTO collections (sample_count)
                             VALUES (%s)
                             RETURNING id
-                            """
+                        """
     return collection_insert_query
 
 def insert_variant_frequency():
+    """
+    Return the SQL query string for inserting or updating a variant frequency in the 'variant_frequencies' table.
+    """
     variant_frequency_insert_query = """
                             INSERT INTO variant_frequencies (variant_id, collection_id, alternate_allele_count)
                             VALUES (%s, %s, %s)
                             ON CONFLICT (variant_id, collection_id)
                             DO UPDATE SET alternate_allele_count = variant_frequencies.alternate_allele_count + EXCLUDED.alternate_allele_count
-                            """
+                        """
     return variant_frequency_insert_query
 
 def insert_gene():
+    """
+    Returns the SQL query string for inserting or updating a gene in the 'genes' table.
+    """
     gene_insert_query = """
                             INSERT INTO genes (symbol)
                             VALUES (%s)
@@ -143,10 +183,13 @@ def insert_gene():
     return gene_insert_query
 
 def insert_gene_location():
+    """
+    Returns the SQL query string for inserting or updating a gene location in the 'gene_locations' table.
+    """
     gene_location_insert_query = """
                             INSERT INTO gene_locations (gene_id, variant_location_id)
                             VALUES (%s, %s)
                             ON CONFLICT (gene_id, variant_location_id)
                             DO NOTHING
-                            """
+                        """
     return gene_location_insert_query

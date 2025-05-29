@@ -16,7 +16,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def process_data(vcf_path, db_name, db_user, db_password, db_host):
+def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db_host: str):
+    """
+    Process VCF files and insert data into the database.
+    """
     logging.info("Trying to process data")
     conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_password, host=db_host)
     logging.info("Connected to the database")

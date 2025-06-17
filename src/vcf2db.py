@@ -1,20 +1,14 @@
 import os.path
-import psycopg2
 import glob
+
 from vcf2db_cli import setup_args
 from utils.db_utils import *
+from utils.setup_logging import setup_logging
+
 import pysam
-import logging
+import psycopg2
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
-
+logger = setup_logging()
 
 def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db_host: str):
     """
@@ -41,7 +35,8 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
 
                 cur.execute(insert_collection(), (1,))
                 collection_id = cur.fetchone()[0]
-
+                
+                processed = 0
                 for record in vcf:
                     chromosome = record.chrom
                     position = record.pos
@@ -65,6 +60,10 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                         allele_count = record.info['AC'][i]
 
                         cur.execute(insert_variant_frequency(), (variant_id, collection_id, allele_count))
+                    
+                    processed += 1
+                    if processed % 10000 == 0: # log every 10,000 records
+                        logging.info(f"Processed {processed} records from {vcf_file}")
 
                 vcf.close()
                 conn.commit()

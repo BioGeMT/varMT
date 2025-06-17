@@ -2,8 +2,6 @@ name: varMTenv
 channels:
   - conda-forge
   - bioconda
-  - r
-  - defaults
 dependencies:
   - python=3.12
   - psycopg2

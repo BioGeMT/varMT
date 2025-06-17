@@ -38,6 +38,7 @@ ENV/
 .ipynb_checkpoints
 
 # Logs and databases
+logs/
 *.log
 *.sqlite
 

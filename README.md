@@ -70,8 +70,9 @@ varMTdb/
 │   ├── vcf2db_cli.py          # Command line interface
 │   └── utils/
 │       └── db_utils.py        # Database utility functions
-├── data/
-│   └── subset_hg19.vcf        # Sample VCF file
+├── res/
+│   └── data/
+│       └── subset_hg19.vcf    # Sample VCF file
 ├── docs/
 │   ├── database_documentation.md  # Detailed schema documentation
 │   └── ERschema.png           # Entity-relationship diagram

@@ -9,7 +9,7 @@ def setup_args():
     # Database connection arguments
     parser.add_argument("-d", "--database", help="PostgreSQL DB name.", required=True)
     parser.add_argument("-u", "--username", help="PostgreSQL user." , required=True)
-    parser.add_argument("-p", "--password", help="PostgreSQL user password.", required=True)
+    parser.add_argument("-p", "--password", help="PostgreSQL user password.", required=False)
     parser.add_argument("-l", "--host", help="PostgreSQL host name", required=True)
 
     # Database creation and manipulation arguments

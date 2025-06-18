@@ -12,6 +12,7 @@ VarMTdb processes VCF files and stores genetic variants in a relational database
 - **VCF Processing**: Parses VCF files using pysam
 - **Aggregated Storage**: Stores variant frequencies across different sample collections
 - **Conflict Handling**: Uses PostgreSQL UPSERT operations to handle duplicate variants
+- **Secure Authentication**: Supports .pgpass file for password-free authentication
 
 ## Environment Setup
 Create and activate the conda environment:
@@ -21,9 +22,20 @@ conda env create -f environment.yaml
 conda activate varMTenv
 ```
 
+## Database authentication
+The use of [.pgpass](https://www.postgresql.org/docs/current/libpq-pgpass.html) file is recommended for security reasons.
+
+You can still provide the password directly from the CLI.
+
 ## Usage
 
 ### Basic Usage
+With .pgpass file (recommended):
+```bash
+python3 src/vcf2db.py -d database_name -u username -l host -c -t -i -v path/to/vcf
+```
+
+With password on command line:
 ```bash
 python3 src/vcf2db.py -d database_name -u username -p password -l host -c -t -i -v path/to/vcf
 ```
@@ -33,7 +45,7 @@ python3 src/vcf2db.py -d database_name -u username -p password -l host -c -t -i 
 **Database Connection:**
 - `-d, --database`: PostgreSQL database name (required)
 - `-u, --username`: PostgreSQL username (required)  
-- `-p, --password`: PostgreSQL password (required)
+- `-p, --password`: PostgreSQL password (optional if using .pgpass)
 - `-l, --host`: PostgreSQL host name (required)
 
 **Database Operations:**
@@ -48,17 +60,17 @@ python3 src/vcf2db.py -d database_name -u username -p password -l host -c -t -i 
 
 1. **Create Database and Tables:**
    ```bash
-   python3 src/vcf2db.py -d myvariantdb -u postgres -p mypassword -l localhost -c -t -v data/
+   python3 src/vcf2db.py -d myvariantdb -u postgres -l localhost -c -t -v data/
    ```
 
 2. **Process VCF Files:**
    ```bash
-   python3 src/vcf2db.py -d myvariantdb -u postgres -p mypassword -l localhost -i -v data/
+   python3 src/vcf2db.py -d myvariantdb -u postgres -l localhost -i -v data/
    ```
 
 3. **Complete Pipeline:**
    ```bash
-   python3 src/vcf2db.py -d myvariantdb -u postgres -p mypassword -l localhost -c -t -i -v data/
+   python3 src/vcf2db.py -d myvariantdb -u postgres -l localhost -c -t -i -v data/
    ```
 
 ## Project Structure

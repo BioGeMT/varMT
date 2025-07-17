@@ -33,7 +33,8 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                 logging.info(f"Processing {vcf_file}")
                 vcf = pysam.VariantFile(vcf_file, 'r')
 
-                cur.execute(insert_collection(), (1,))
+                sample_count = len(vcf.header.samples)
+                cur.execute(insert_collection(), (sample_count,))
                 collection_id = cur.fetchone()[0]
                 
                 processed = 0

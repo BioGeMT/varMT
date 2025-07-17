@@ -73,6 +73,7 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
 
                 vcf.close()
                 conn.commit()
+                logging.info(f"Successfully processed {vcf_file} with {processed} records.")
 
             except Exception as e:
                 conn.rollback()

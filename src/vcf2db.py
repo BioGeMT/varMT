@@ -58,7 +58,11 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                         cur.execute(insert_variant(), (var_location_id, rs_id, alt_allele))
                         variant_id = cur.fetchone()[0]
 
-                        allele_count = record.info['AC'][i]
+                        ac_info = record.info['AC']
+                        if isinstance(ac_info, list):
+                            allele_count = ac_info[i]
+                        else:
+                            allele_count = ac_info
 
                         cur.execute(insert_variant_frequency(), (variant_id, collection_id, allele_count))
                     

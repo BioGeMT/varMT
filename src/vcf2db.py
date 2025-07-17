@@ -10,7 +10,7 @@ import psycopg2
 
 logger = setup_logging()
 
-def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db_host: str):
+def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db_host: str, ref_genome: str):
     """
     Process VCF files and insert data into the database.
     """
@@ -44,7 +44,7 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                     reference = record.ref
                     gene_symbols = record.info.get('CSQ', None) #TODO this may vary depending on the annotation process
 
-                    cur.execute(insert_variant_location(), (chromosome, position, reference, "GRCh38"))
+                    cur.execute(insert_variant_location(), (chromosome, position, reference, ref_genome))
                     var_location_id = cur.fetchone()[0]
 
                     for symbol in gene_symbols: # a single variant can be associated with multiple genes
@@ -94,7 +94,14 @@ def main():
         create_tables(dbname=args.database, user=args.username, password=args.password, host=args.host)
 
     if args.insert:
-        process_data(vcf_path=args.vcf, db_name=args.database, db_user=args.username, db_password=args.password, db_host=args.host)
+        process_data(
+            vcf_path=args.vcf,
+            db_name=args.database,
+            db_user=args.username,
+            db_password=args.password,
+            db_host=args.host,
+            ref_genome=args.reference_genome
+        )
 
 if __name__ == '__main__':
     main()

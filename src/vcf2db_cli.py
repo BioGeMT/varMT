@@ -19,6 +19,8 @@ def setup_args():
 
     parser.add_argument("-v", "--vcf", help="Path to the VCF file or directory containing VCF files.", required=False)
 
+    parser.add_argument("-r", "--reference_genome", help="Reference genome version (e.g., GRCh37, GRCh38)", default="GRCh38", required=False)
+
     args = parser.parse_args()
     if args.insert and not args.vcf:
         parser.error("--vcf is required when using --insert")

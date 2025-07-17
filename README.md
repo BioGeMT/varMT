@@ -55,6 +55,7 @@ python3 src/vcf2db.py -d database_name -u username -p password -l host -c -t -i 
 
 **Data Input:**
 - `-v, --vcf`: Path to VCF file or directory containing VCF files
+- `-r, --reference_genome`: Reference genome version (optional, default=GRCh38)
 
 ### Step-by-Step Workflow
 

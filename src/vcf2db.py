@@ -67,8 +67,9 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                         cur.execute(insert_variant_frequency(), (variant_id, collection_id, allele_count))
                     
                     processed += 1
-                    if processed % 10000 == 0: # log every 10,000 records
+                    if processed % 10000 == 0: # log and commit every 10,000 records
                         logging.info(f"Processed {processed} records from {vcf_file}")
+                        conn.commit()
 
                 vcf.close()
                 conn.commit()

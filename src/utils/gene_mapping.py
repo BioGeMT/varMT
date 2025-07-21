@@ -7,10 +7,10 @@ logger = setup_logging()
 def load_gene_mapping() -> dict:
     """
     Load gene mapping from TSV file.
-    The file should contain (at least) two columns: "Ensembl gene ID" and "Gene name".
+    The file should contain (at least) two columns: "Ensembl gene ID" and "Gene name" (symbol).
 
     Returns:
-        gene_mapping (dict): A dictionary mapping Ensembl gene IDs to gene names.
+        gene_mapping (dict): A dictionary mapping Ensembl gene IDs to gene names (symbols).
     """
 
     df = pandas.read_csv("res/ensembl_gene_mapping.tsv", sep="\t")

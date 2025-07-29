@@ -193,3 +193,50 @@ def insert_gene_location():
                             DO NOTHING
                         """
     return gene_location_insert_query
+
+def create_indexes(dbname: str, user: str, password: str, host: str) -> None:
+    """
+    Create indexes for VarMT database.
+
+    Args:
+        dbname (str): Name of the database.
+        user (str): PostgreSQL user name.
+        password (str): PostgreSQL user password.
+        host (str): PostgreSQL host name.
+
+    Returns:
+        None
+    """
+
+    conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host)
+    cur = conn.cursor()
+
+    logger.info("Creating database indexes...")
+
+    indexes = [
+        "CREATE INDEX IF NOT EXISTS idx_variant_locations_chr_pos ON variant_locations (chromosome, position);",
+        "CREATE INDEX IF NOT EXISTS idx_variant_locations_position ON variant_locations (position);",
+        "CREATE INDEX IF NOT EXISTS idx_genes_symbol ON genes (symbol);",
+
+        # Foreign key indexes for join optimization
+        "CREATE INDEX IF NOT EXISTS idx_variants_location_id ON variants (variant_location_id);",
+        "CREATE INDEX IF NOT EXISTS idx_variant_frequencies_variant_id ON variant_frequencies (variant_id);",
+        "CREATE INDEX IF NOT EXISTS idx_variant_frequencies_collection_id ON variant_frequencies (collection_id);",
+        "CREATE INDEX IF NOT EXISTS idx_gene_locations_gene_id ON gene_locations (gene_id);",
+        "CREATE INDEX IF NOT EXISTS idx_gene_locations_variant_location_id ON gene_locations (variant_location_id);"
+    ]
+
+    try:
+        for index in indexes:
+            logger.info(f"Creating index: {index.split('ON')[1]}")
+            cur.execute(index)
+        
+        conn.commit()
+        logger.info("Indexes created successfully.")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error creating indexes: {e}")
+        raise
+    finally:
+        cur.close()
+        conn.close()

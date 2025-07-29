@@ -16,6 +16,7 @@ def setup_args():
     parser.add_argument("-c", "--create", action="store_true", help="Delete and recreate DB if existing.", required=False)
     parser.add_argument("-t", "--tables", action="store_true", help="Create the tables in the database.", required=False)
     parser.add_argument("-i", "--insert", action="store_true", help="Insert the data inside the tables", required=False)
+    parser.add_argument("-x", "--indexes", action="store_true", help="Create indexes for the tables.", required=False)
 
     parser.add_argument("-v", "--vcf", help="Path to the VCF file or directory containing VCF files.", required=False)
 

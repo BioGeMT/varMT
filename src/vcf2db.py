@@ -103,5 +103,8 @@ def main():
             ref_genome=args.reference_genome
         )
 
+    if args.indexes:
+        create_indexes(dbname=args.database, user=args.username, password=args.password, host=args.host)
+
 if __name__ == '__main__':
     main()

@@ -13,6 +13,7 @@ VarMTdb processes VCF files and stores genetic variants in a relational database
 - **Aggregated Storage**: Stores variant frequencies across different sample collections
 - **Conflict Handling**: Uses PostgreSQL UPSERT operations to handle duplicate variants
 - **Secure Authentication**: Supports .pgpass file for password-free authentication
+- **Performance Optimization**: Creates essential database indexes for fast querying
 
 ## Environment Setup
 Create and activate the conda environment:
@@ -32,12 +33,12 @@ You can still provide the password directly from the CLI.
 ### Basic Usage
 With .pgpass file (recommended):
 ```bash
-python3 src/vcf2db.py -d database_name -u username -l host -c -t -i -v path/to/vcf
+python3 src/vcf2db.py -d database_name -u username -l host -c -t -i -x -v path/to/vcf
 ```
 
 With password on command line:
 ```bash
-python3 src/vcf2db.py -d database_name -u username -p password -l host -c -t -i -v path/to/vcf
+python3 src/vcf2db.py -d database_name -u username -p password -l host -c -t -i -x -v path/to/vcf
 ```
 
 ### Command Line Arguments
@@ -52,6 +53,7 @@ python3 src/vcf2db.py -d database_name -u username -p password -l host -c -t -i 
 - `-c, --create`: Delete and recreate database if existing
 - `-t, --tables`: Create the database tables
 - `-i, --insert`: Insert VCF data into tables
+- `-x, --indexes`: Create indexes on tables
 
 **Data Input:**
 - `-v, --vcf`: Path to VCF file or directory containing VCF files
@@ -69,9 +71,9 @@ python3 src/vcf2db.py -d database_name -u username -p password -l host -c -t -i 
    python3 src/vcf2db.py -d myvariantdb -u postgres -l localhost -i -v data/
    ```
 
-3. **Complete Pipeline:**
+3. **Create Indexes (after data loading):**
    ```bash
-   python3 src/vcf2db.py -d myvariantdb -u postgres -l localhost -c -t -i -v data/
+   python3 src/vcf2db.py -d myvariantdb -u postgres -l localhost -x
    ```
 
 ## Project Structure

@@ -1,7 +1,7 @@
 import logging
 import os
 
-def setup_logging(log_file='logs/vcf_processing.log'):
+def setup_logging(log_file: str ='logs/vcf_processing.log') -> logging.Logger:
     """
     Configure logging with different levels for console and file.
     """

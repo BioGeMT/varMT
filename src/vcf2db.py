@@ -11,7 +11,7 @@ import psycopg2
 
 logger = setup_logging()
 
-def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db_host: str, ref_genome: str):
+def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db_host: str, ref_genome: str) -> None:
     """
     Process VCF files and insert data into the database.
     """
@@ -90,7 +90,7 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
     finally:
         conn.close()
 
-def main():
+def main() -> None:
     args = setup_args()
 
     if args.create:

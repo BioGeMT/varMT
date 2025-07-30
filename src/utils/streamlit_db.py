@@ -10,7 +10,7 @@ class DatabaseClient:
     Provides caching and connection management.
     """
 
-    def __init__(self, config_path: str='config/db_connection.yml'):
+    def __init__(self, config_path: str='../config/db_connection.yml'):
         self.config_path = config_path
         self._config = None
 
@@ -28,7 +28,8 @@ class DatabaseClient:
             self._config = self.load_config()
 
         db_config = self._config['database']
-        connection_string = f"postgresql://{db_config['username']}@{db_config['host']}:{db_config['port']}/{db_config['database']}"
+        connection_string = f"postgresql://{db_config['username']}@{db_config['host']}:{db_config['port']}/{db_config['database']}" # Using .pgpass
+        #connection_string = f"postgresql://{db_config['username']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['database']}" # Using password
 
         return create_engine(connection_string)
 
@@ -39,7 +40,19 @@ class DatabaseClient:
         Results are cached for performance.
         """
 
-        conn = _self.get_connection()
-        df = pd.read_sql(query, conn)
+        engine = _self.get_connection()
+        df = pd.read_sql(query, engine)
+
+        return df
+    
+    @st.cache_data
+    def execute_query_with_params(_self, query: str, params: tuple) -> pd.DataFrame:
+        """
+        Execute a SQL query with parameters and return results as a pandas DataFrame.
+        Results are cached for performance.
+        """
+
+        engine = _self.get_connection()
+        df = pd.read_sql(query, engine, params=params)
 
         return df

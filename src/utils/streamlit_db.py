@@ -6,11 +6,11 @@ from typing import Dict, Any
 
 class DatabaseClient:
     """
-    Handles PostgreSQL database connections for Streamlit apps.
+    Handles PostgreSQL database connections for Streamlit application.
     Provides caching and connection management.
     """
 
-    def __init__(self, config_path: str='../config/db_connection.yml'):
+    def __init__(self, config_path: str='config/db_connection.yml'):
         self.config_path = config_path
         self._config = None
 
@@ -28,8 +28,12 @@ class DatabaseClient:
             self._config = self.load_config()
 
         db_config = self._config['database']
-        connection_string = f"postgresql://{db_config['username']}@{db_config['host']}:{db_config['port']}/{db_config['database']}" # Using .pgpass
-        #connection_string = f"postgresql://{db_config['username']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['database']}" # Using password
+
+        if db_config['password']:
+            connection_string = f"postgresql://{db_config['username']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['database']}" # Using password
+        else:
+            connection_string = f"postgresql://{db_config['username']}@{db_config['host']}:{db_config['port']}/{db_config['database']}" # Using .pgpass
+
 
         return create_engine(connection_string)
 

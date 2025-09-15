@@ -1,6 +1,6 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 
-def setup_args():
+def setup_args() -> Namespace:
     parser = ArgumentParser(
         prog="varMTdb",
         description="Tool for parsing VCF files and store data in PostreSQL"

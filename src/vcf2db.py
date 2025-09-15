@@ -4,19 +4,21 @@ import glob
 from vcf2db_cli import setup_args
 from utils.db_utils import *
 from utils.setup_logging import setup_logging
+from utils.gene_mapping import load_gene_mapping, map_gene_symbols
 
 import pysam
 import psycopg2
 
 logger = setup_logging()
 
-def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db_host: str, ref_genome: str):
+def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db_host: str, ref_genome: str) -> None:
     """
     Process VCF files and insert data into the database.
     """
     logging.info("Trying to process data")
     conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_password, host=db_host)
     logging.info("Connected to the database")
+    gene_mapping = load_gene_mapping()
 
     try:
         if os.path.isdir(vcf_path):
@@ -42,15 +44,19 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                     chromosome = record.chrom
                     position = record.pos
                     reference = record.ref
-                    gene_symbols = record.info.get('CSQ', None) #TODO this may vary depending on the annotation process
 
                     cur.execute(insert_variant_location(), (chromosome, position, reference, ref_genome))
                     var_location_id = cur.fetchone()[0]
 
-                    for symbol in gene_symbols: # a single variant can be associated with multiple genes
-                        cur.execute(insert_gene(), (symbol,))
-                        gene_id = cur.fetchone()[0]
-                        cur.execute(insert_gene_location(), (gene_id, var_location_id))
+                    ensembl_gene_id = record.info.get("SNPEFF_GENE_NAME", None)
+
+                    if ensembl_gene_id:
+                        gene_symbols = map_gene_symbols(ensembl_gene_id, gene_mapping)
+
+                        for symbol in gene_symbols: # a single variant can be associated with multiple genes
+                            cur.execute(insert_gene(), (symbol,))
+                            gene_id = cur.fetchone()[0]
+                            cur.execute(insert_gene_location(), (gene_id, var_location_id))
 
                     for i, alt_allele in enumerate(record.alts):
                         rs_id = record.id if record.id else None
@@ -84,7 +90,7 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
     finally:
         conn.close()
 
-def main():
+def main() -> None:
     args = setup_args()
 
     if args.create:

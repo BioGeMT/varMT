@@ -86,8 +86,9 @@ varMTdb/
 │   └── utils/
 │       └── db_utils.py        # Database utility functions
 ├── res/
-│   └── data/
-│       └── subset_hg19.vcf    # Sample VCF file
+│   ├── data/
+│   │   └── subset_hg19.vcf    # Sample VCF file
+│   └── ensembl_gene_mapping.tsv  # Ensembl gene mapping data
 ├── docs/
 │   ├── database_documentation.md  # Detailed schema documentation
 │   └── ERschema.png           # Entity-relationship diagram

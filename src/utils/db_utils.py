@@ -10,7 +10,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def create_database(dbname: str, user: str, password: str, host: str):
+def create_database(dbname: str, user: str, password: str, host: str) -> None:
     """
     Creates a PostgreSQL database with the specified name.
     If the database already exists, it will be dropped and recreated.
@@ -35,7 +35,7 @@ def create_database(dbname: str, user: str, password: str, host: str):
 
     logger.info("Database created correctly")
 
-def create_tables(dbname: str, user: str, password: str, host: str):
+def create_tables(dbname: str, user: str, password: str, host: str) -> None:
     """
     Create the necessary tables in the PostgreSQL database.
 
@@ -120,7 +120,7 @@ def create_tables(dbname: str, user: str, password: str, host: str):
     logger.info("Tables created correctly")
 
 
-def insert_variant():
+def insert_variant() -> str:
     """
     Returns the SQL query string for inserting or updating a variant in the 'variants' table.
     """
@@ -133,7 +133,7 @@ def insert_variant():
                         """
     return variant_insert_query
 
-def insert_variant_location():
+def insert_variant_location() -> str:
     """
     Returns the SQL query string for inserting or updating a variant location in the 'variant_locations' table.
     """
@@ -146,7 +146,7 @@ def insert_variant_location():
                         """
     return variant_location_insert_query
 
-def insert_collection():
+def insert_collection() -> str:
     """
     Returns the SQL query string for inserting a new collection in the 'collections' table.
     """
@@ -157,7 +157,7 @@ def insert_collection():
                         """
     return collection_insert_query
 
-def insert_variant_frequency():
+def insert_variant_frequency() -> str:
     """
     Return the SQL query string for inserting or updating a variant frequency in the 'variant_frequencies' table.
     """
@@ -169,7 +169,7 @@ def insert_variant_frequency():
                         """
     return variant_frequency_insert_query
 
-def insert_gene():
+def insert_gene() -> str:
     """
     Returns the SQL query string for inserting or updating a gene in the 'genes' table.
     """
@@ -182,7 +182,7 @@ def insert_gene():
                         """
     return gene_insert_query
 
-def insert_gene_location():
+def insert_gene_location() -> str:
     """
     Returns the SQL query string for inserting or updating a gene location in the 'gene_locations' table.
     """

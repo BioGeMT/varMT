@@ -103,25 +103,7 @@ if search_button:
             if len(results) == 0:
                 st.warning("No variants found matching your search criteria.")
             else:
-                st.success(f"✅ Found {len(results)} variants matching your criteria!")
-
-                # Display summary metrics
-                st.header("Search Results Summary")
-                col1, col2, col3, col4 = st.columns(4)
-
-                with col1:
-                    st.metric("Total Variants", len(results))
-                with col2:
-                    unique_genes = results['gene'].nunique() if 'gene' in results.columns else 0
-                    st.metric("Unique Genes", unique_genes)
-                with col3:
-                    unique_positions = results['position'].nunique()
-                    st.metric("Unique Positions", unique_positions)
-                with col4:
-                    avg_alt_freq = results['alt_allele_freq'].mean()
-                    st.metric("Avg Alt Allele Freq", f"{avg_alt_freq:.4f}")
-
-                st.header("Variant Details")
+                st.header("Query Results")
 
                 display_results = results.copy()
 
@@ -155,6 +137,13 @@ if search_button:
                     use_container_width=True,
                     hide_index=True
                 )
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**Total rows returned:** {len(results)}")
+                with col2:
+                    total_samples = results['sample_count'].iloc[0] if 'sample_count' in results.columns and len(results) > 0 else 0
+                    st.write(f"**Samples in collection:** {total_samples}")
 
                 # Download button
                 csv = display_results.to_csv(index=False)

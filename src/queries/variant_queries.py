@@ -96,18 +96,7 @@ def get_variants_advanced_search():
         ) as ref_allele_freq,
         ROUND(
             vf.alternate_allele_count::numeric / (c.sample_count * 2), 4
-        ) as alt_allele_freq,
-        -- Calculate genotype frequencies (Hardy-Weinberg equilibrium)
-        ROUND(
-            POWER((c.sample_count * 2 - vf.alternate_allele_count)::numeric / (c.sample_count * 2), 2), 4
-        ) as homozygous_ref_freq,
-        ROUND(
-            2 * (vf.alternate_allele_count::numeric / (c.sample_count * 2)) *
-            ((c.sample_count * 2 - vf.alternate_allele_count)::numeric / (c.sample_count * 2)), 4
-        ) as heterozygous_freq,
-        ROUND(
-            POWER(vf.alternate_allele_count::numeric / (c.sample_count * 2), 2), 4
-        ) as homozygous_alt_freq
+        ) as alt_allele_freq
     FROM variant_locations vl
     JOIN variants v ON vl.id = v.variant_location_id
     JOIN variant_frequencies vf ON v.id = vf.variant_id

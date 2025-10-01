@@ -132,8 +132,14 @@ if search_button:
                     if col in display_results.columns:
                         display_results[col] = display_results[col].apply(lambda x: f"{x:.4f}")
 
+                styled_results = display_results.style.format({
+                    "Position": lambda x : '{:,.0f}'.format(x)
+                },
+                thousands=' '
+                )
+
                 st.dataframe(
-                    display_results,
+                    styled_results,
                     use_container_width=True,
                     hide_index=True
                 )

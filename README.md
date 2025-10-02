@@ -95,3 +95,6 @@ varMTdb/
 ├── environment.yaml           # Conda environment specification
 └── README.md
 ```
+
+## Sample data
+The sample dataset provided (`res/data/subset_hg19.vcf`) is publicly available (source [1000 Genomes Project](http://www.internationalgenome.org/)).

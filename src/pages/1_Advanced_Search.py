@@ -1,5 +1,7 @@
 import streamlit as st
+from streamlit_searchbox import st_searchbox
 import pandas as pd
+
 from utils.streamlit_db import DatabaseClient
 from queries.variant_queries import get_variants_advanced_search
 
@@ -10,43 +12,61 @@ db = DatabaseClient()
 st.title("Advanced Variant Search")
 st.write("Search variants by gene symbol, chromosome, and/or position range with detailed frequency analysis.")
 
+@st.cache_data
+def load_genes_suggestions() -> list[str]:
+    """Load gene symbols from the database for suggestions while searching."""
+    query = "SELECT DISTINCT symbol FROM genes ORDER BY symbol;"
+    results = db.execute_query(query)
+    return results['symbol'].tolist() if not results.empty else []
+
+def search_genes(search_term: str) -> list[str]:
+    """Return a list of gene symbols matching the search term."""
+    if not search_term:
+        return []
+
+    suggestions = load_genes_suggestions()
+    search_term_upper = search_term.upper()
+    matches = [gene for gene in suggestions if search_term_upper in gene.upper()]
+    return matches[:10]  # Limit to top 10 matches
+
 # Search form
-with st.form("search_form"):
-    st.header("Search Parameters")
+st.header("Search Parameters")
 
-    col1, col2 = st.columns(2)
+col1, col2 = st.columns(2)
 
-    with col1:
-        gene_symbol = st.text_input(
-            "Gene Symbol",
-            placeholder="e.g., BRCA1, TP53, APOE",
-        )
+with col1:
+    gene_symbol = st_searchbox(
+        search_genes,
+        placeholder="e.g., BRCA1, TP53, APOE",
+        label="Gene Symbol",
+        key="gene_searchbox"
+    )
 
-        chromosome = st.selectbox(
-            "Chromosome (optional)",
-            options=[""] + [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
-                "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
-                "21", "22", "X", "Y"
-            ],
-        )
+    chromosome = st.selectbox(
+        "Chromosome (optional)",
+        options=[""] + [
+            "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+            "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
+            "21", "22", "X", "Y"
+        ],
+    )
 
-    with col2:
-        start_pos = st.number_input(
-            "Start Position (optional)",
-            min_value=1,
-            value=None,
-        )
+with col2:
+    start_pos = st.number_input(
+        "Start Position (optional)",
+        min_value=1,
+        value=None,
+    )
 
-        end_pos = st.number_input(
-            "End Position (optional)",
-            min_value=1,
-            value=None,
-        )
+    end_pos = st.number_input(
+        "End Position (optional)",
+        min_value=1,
+        value=None,
+    )
 
-    st.info("You can search by gene alone, position range alone, or combine both for more specific results.")
+st.info("You can search by gene alone, position range alone, or combine both for more specific results.")
 
-    search_button = st.form_submit_button("Search Variants", type="primary")
+search_button = st.button("Search Variants", type="primary")
 
 def build_query_and_params():
     """Build the SQL query with dynamic filters based on user input."""
@@ -140,7 +160,7 @@ if search_button:
 
                 st.dataframe(
                     styled_results,
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True
                 )
 

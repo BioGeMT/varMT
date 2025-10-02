@@ -64,6 +64,30 @@ with col2:
         value=None,
     )
 
+# Frequency filters in collapsible section
+with st.expander("Advanced Filters (Optional)", expanded=False):
+    freq_col1, freq_col2 = st.columns(2)
+
+    with freq_col1:
+        min_alt_freq = st.number_input(
+            "Min Alt Frequency",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.0,
+            step=0.01,
+            format="%.3f"
+        )
+
+    with freq_col2:
+        max_alt_freq = st.number_input(
+            "Max Alt Frequency",
+            min_value=0.0,
+            max_value=1.0,
+            value=1.0,
+            step=0.01,
+            format="%.3f"
+        )
+
 st.info("You can search by gene alone, position range alone, or combine both for more specific results.")
 
 search_button = st.button("Search Variants", type="primary")
@@ -76,7 +100,7 @@ def build_query_and_params():
     params = []
 
     # Gene filter
-    if gene_symbol.strip():
+    if gene_symbol and gene_symbol.strip():
         where_parts.append("UPPER(g.symbol) = UPPER(%s)")
         params.append(gene_symbol.strip())
 
@@ -96,6 +120,11 @@ def build_query_and_params():
         where_parts.append("vl.position <= %s")
         params.append(end_pos)
 
+    # Frequency filters (optional - only applied if user changes defaults)
+    if min_alt_freq > 0.0 or max_alt_freq < 1.0:
+        where_parts.append("(vf.alternate_allele_count::numeric / (c.sample_count * 2)) BETWEEN %s AND %s")
+        params.extend([min_alt_freq, max_alt_freq])
+
     # Build WHERE clause
     where_clause = "WHERE " + " AND ".join(where_parts) if where_parts else ""
 
@@ -106,7 +135,7 @@ def build_query_and_params():
 
 if search_button:
     # Validate input
-    if not gene_symbol.strip() and not chromosome and start_pos is None and end_pos is None:
+    if not (gene_symbol and gene_symbol.strip()) and not chromosome and start_pos is None and end_pos is None:
         st.error("⚠️ Please provide at least one search parameter (gene symbol, chromosome, or position range).")
     elif start_pos is not None and end_pos is not None and start_pos > end_pos:
         st.error("⚠️ Start position must be less than or equal to end position.")

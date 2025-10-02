@@ -138,16 +138,13 @@ if search_button:
                     'sample_count': 'Samples',
                     'alternate_allele_count': 'Alt Count',
                     'ref_allele_freq': 'Ref Freq',
-                    'alt_allele_freq': 'Alt Freq',
-                    'homozygous_ref_freq': 'AA Freq',
-                    'heterozygous_freq': 'AB Freq',
-                    'homozygous_alt_freq': 'BB Freq'
+                    'alt_allele_freq': 'Alt Freq'
                 }
 
                 display_results = display_results.rename(columns=column_mapping)
 
                 # Format frequency columns for better readability
-                freq_cols = ['Ref Freq', 'Alt Freq', 'AA Freq', 'AB Freq', 'BB Freq']
+                freq_cols = ['Ref Freq', 'Alt Freq']
                 for col in freq_cols:
                     if col in display_results.columns:
                         display_results[col] = display_results[col].apply(lambda x: f"{x:.4f}")

@@ -9,3 +9,5 @@ dependencies:
   - streamlit
   - sqlalchemy
   - pandas
+  - pip: 
+      - streamlit-searchbox

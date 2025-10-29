@@ -58,6 +58,7 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                             gene_id = cur.fetchone()[0]
                             cur.execute(insert_gene_location(), (gene_id, var_location_id))
 
+                    an_info = record.info.get('AN', None)
                     for i, alt_allele in enumerate(record.alts):
                         rs_id = record.id if record.id else None
 
@@ -70,7 +71,7 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                         else:
                             allele_count = ac_info
 
-                        cur.execute(insert_variant_frequency(), (variant_id, collection_id, allele_count))
+                        cur.execute(insert_variant_frequency(), (variant_id, collection_id, allele_count, an_info))
                     
                     processed += 1
                     if processed % 10000 == 0: # log and commit every 10,000 records

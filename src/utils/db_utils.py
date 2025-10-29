@@ -88,6 +88,7 @@ def create_tables(dbname: str, user: str, password: str, host: str) -> None:
                 variant_id INTEGER NOT NULL,
                 collection_id INTEGER NOT NULL,
                 alternate_allele_count INTEGER NOT NULL,
+                allele_number INTEGER NOT NULL,
                 FOREIGN KEY (variant_id) REFERENCES variants (id),
                 FOREIGN KEY (collection_id) REFERENCES collections (id),
                 UNIQUE (variant_id, collection_id)
@@ -162,10 +163,8 @@ def insert_variant_frequency() -> str:
     Return the SQL query string for inserting or updating a variant frequency in the 'variant_frequencies' table.
     """
     variant_frequency_insert_query = """
-                            INSERT INTO variant_frequencies (variant_id, collection_id, alternate_allele_count)
-                            VALUES (%s, %s, %s)
-                            ON CONFLICT (variant_id, collection_id)
-                            DO UPDATE SET alternate_allele_count = variant_frequencies.alternate_allele_count + EXCLUDED.alternate_allele_count
+                            INSERT INTO variant_frequencies (variant_id, collection_id, alternate_allele_count, allele_number)
+                            VALUES (%s, %s, %s, %s)
                         """
     return variant_frequency_insert_query
 

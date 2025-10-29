@@ -11,26 +11,26 @@ def get_variants_in_range():
     Returns: DataFrame with variant details and frequency calculations
     """
     return """
-    SELECT 
+    SELECT
         vl.chromosome,
         vl.position,
         vl.reference_allele,
         v.alternate_allele,
         v.rs_id,
-        c.sample_count,
-        vf.alternate_allele_count,
-        -- Calculate allele frequencies
+        SUM(vf.alternate_allele_count) as alternate_allele_count,
+        SUM(vf.allele_number) as allele_number,
+        -- Calculate aggregated allele frequencies across all collections
         ROUND(
-            (c.sample_count * 2 - vf.alternate_allele_count)::numeric / (c.sample_count * 2), 4
+            (SUM(vf.allele_number) - SUM(vf.alternate_allele_count))::numeric / SUM(vf.allele_number), 4
         ) as ref_allele_freq,
         ROUND(
-            vf.alternate_allele_count::numeric / (c.sample_count * 2), 4
+            SUM(vf.alternate_allele_count)::numeric / SUM(vf.allele_number), 4
         ) as alt_allele_freq
     FROM variant_locations vl
     JOIN variants v ON vl.id = v.variant_location_id
     JOIN variant_frequencies vf ON v.id = vf.variant_id
-    JOIN collections c ON vf.collection_id = c.id
     WHERE vl.chromosome = %s
+    GROUP BY vl.chromosome, vl.position, vl.reference_allele, v.alternate_allele, v.rs_id
     ORDER BY vl.position, v.alternate_allele;
     """
 
@@ -42,23 +42,23 @@ def get_variants_by_gene():
     Returns: DataFrame with variants in the specified gene
     """
     return """
-    SELECT 
+    SELECT
         g.symbol as gene,
         vl.chromosome,
         vl.position,
         vl.reference_allele,
         v.alternate_allele,
         v.rs_id,
-        vf.alternate_allele_count,
-        c.sample_count,
-        ROUND(vf.alternate_allele_count::numeric / (c.sample_count * 2), 4) as allele_frequency
+        SUM(vf.alternate_allele_count) as alternate_allele_count,
+        SUM(vf.allele_number) as allele_number,
+        ROUND(SUM(vf.alternate_allele_count)::numeric / SUM(vf.allele_number), 4) as allele_frequency
     FROM genes g
     JOIN gene_locations gl ON g.id = gl.gene_id
     JOIN variant_locations vl ON gl.variant_location_id = vl.id
     JOIN variants v ON vl.id = v.variant_location_id
     JOIN variant_frequencies vf ON v.id = vf.variant_id
-    JOIN collections c ON vf.collection_id = c.id
     WHERE g.symbol = %s
+    GROUP BY g.symbol, vl.chromosome, vl.position, vl.reference_allele, v.alternate_allele, v.rs_id
     ORDER BY vl.position;
     """
 
@@ -67,31 +67,32 @@ def get_variants_advanced_search():
     Advanced search for variants by gene symbol and/or chromosomal position range.
     Supports flexible filtering with optional parameters.
 
-    Returns: Base SQL query template for dynamic WHERE clause building
+    Returns: Base SQL query template for dynamic WHERE and HAVING clause building
     """
     return """
-    SELECT DISTINCT
+    SELECT
         g.symbol as gene,
         vl.chromosome,
         vl.position,
         vl.reference_allele,
         v.alternate_allele,
         v.rs_id,
-        c.sample_count,
-        vf.alternate_allele_count,
-        -- Calculate allele frequencies
+        SUM(vf.alternate_allele_count) as alternate_allele_count,
+        SUM(vf.allele_number) as allele_number,
+        -- Calculate aggregated allele frequencies across all collections
         ROUND(
-            (c.sample_count * 2 - vf.alternate_allele_count)::numeric / (c.sample_count * 2), 4
+            (SUM(vf.allele_number) - SUM(vf.alternate_allele_count))::numeric / SUM(vf.allele_number), 4
         ) as ref_allele_freq,
         ROUND(
-            vf.alternate_allele_count::numeric / (c.sample_count * 2), 4
+            SUM(vf.alternate_allele_count)::numeric / SUM(vf.allele_number), 4
         ) as alt_allele_freq
     FROM variant_locations vl
     JOIN variants v ON vl.id = v.variant_location_id
     JOIN variant_frequencies vf ON v.id = vf.variant_id
-    JOIN collections c ON vf.collection_id = c.id
     LEFT JOIN gene_locations gl ON vl.id = gl.variant_location_id
     LEFT JOIN genes g ON gl.gene_id = g.id
     {where_clause}
+    GROUP BY g.symbol, vl.chromosome, vl.position, vl.reference_allele, v.alternate_allele, v.rs_id
+    {having_clause}
     ORDER BY vl.chromosome, vl.position, v.alternate_allele;
     """

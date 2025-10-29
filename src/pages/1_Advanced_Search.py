@@ -97,6 +97,7 @@ def build_query_and_params():
     base_query = get_variants_advanced_search()
 
     where_parts = []
+    having_parts = []
     params = []
 
     # Gene filter
@@ -121,15 +122,17 @@ def build_query_and_params():
         params.append(end_pos)
 
     # Frequency filters (optional - only applied if user changes defaults)
+    # Uses HAVING since it filters on aggregated values
     if min_alt_freq > 0.0 or max_alt_freq < 1.0:
-        where_parts.append("(vf.alternate_allele_count::numeric / (c.sample_count * 2)) BETWEEN %s AND %s")
+        having_parts.append("(SUM(vf.alternate_allele_count)::numeric / SUM(vf.allele_number)) BETWEEN %s AND %s")
         params.extend([min_alt_freq, max_alt_freq])
 
-    # Build WHERE clause
+    # Build WHERE and HAVING clauses
     where_clause = "WHERE " + " AND ".join(where_parts) if where_parts else ""
+    having_clause = "HAVING " + " AND ".join(having_parts) if having_parts else ""
 
-    # Format the query with WHERE clause
-    final_query = base_query.format(where_clause=where_clause)
+    # Format the query with WHERE and HAVING clauses
+    final_query = base_query.format(where_clause=where_clause, having_clause=having_clause)
 
     return final_query, tuple(params)
 

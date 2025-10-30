@@ -159,6 +159,16 @@ if search_button:
 
                 display_results = results.copy()
 
+                # Add Gnomad hyperlink column
+                def create_gnomad_link(row):
+                    chrom = row['chromosome']
+                    pos = row['position']
+                    ref = row['reference_allele']
+                    alt = row['alternate_allele']
+                    return f"https://gnomad.broadinstitute.org/variant/{chrom}-{pos}-{ref}-{alt}"
+
+                display_results['gnomad_url'] = display_results.apply(create_gnomad_link, axis=1)
+
                 # Rename columns for better display
                 column_mapping = {
                     'gene': 'Gene',
@@ -170,7 +180,8 @@ if search_button:
                     'sample_count': 'Samples',
                     'alternate_allele_count': 'Alt Count',
                     'ref_allele_freq': 'Ref Freq',
-                    'alt_allele_freq': 'Alt Freq'
+                    'alt_allele_freq': 'Alt Freq',
+                    'gnomad_url': 'Gnomad'
                 }
 
                 display_results = display_results.rename(columns=column_mapping)
@@ -190,7 +201,14 @@ if search_button:
                 st.dataframe(
                     styled_results,
                     width='stretch',
-                    hide_index=True
+                    hide_index=True,
+                    column_config={
+                        "Gnomad": st.column_config.LinkColumn(
+                            "Gnomad",
+                            help="View variant in Gnomad browser",
+                            display_text="View"
+                        )
+                    }
                 )
 
                 col1, col2 = st.columns(2)

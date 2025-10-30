@@ -12,6 +12,7 @@ db = DatabaseClient()
 
 st.title("Advanced Variant Search")
 st.write("Search variants by gene symbol, chromosome, and/or position range with detailed frequency analysis.")
+st.info("ℹ️ Reference genome: **GRCh38**")
 
 @st.cache_data
 def load_genes_suggestions() -> list[str]:

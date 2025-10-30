@@ -4,6 +4,7 @@ import pandas as pd
 
 from utils.streamlit_db import DatabaseClient
 from queries.variant_queries import get_variants_advanced_search
+from utils.csv_parser import detect_csv_format, validate_csv_data, build_query_conditions
 
 st.set_page_config(page_title="Advanced Variant Search")
 
@@ -29,8 +30,77 @@ def search_genes(search_term: str) -> list[str]:
     matches = [gene for gene in suggestions if search_term_upper in gene.upper()]
     return matches[:10]  # Limit to top 10 matches
 
-# Search form
-st.header("Search Parameters")
+# CSV Upload Section
+with st.expander("📁 Bulk Search via CSV Upload", expanded=False):
+    st.markdown("""
+    Upload a CSV file to search for multiple variants at once.
+
+    **Required columns (case-insensitive):**
+    - `gene_symbol`: Gene symbol (e.g., BRCA1, TP53)
+    - `chromosome`: Chromosome (1-22, X, Y, MT)
+    - `start_position`: Start position (for single positions, set start = end)
+    - `end_position`: End position
+
+    **Example CSV:**
+    ```
+    gene_symbol,chromosome,start_position,end_position
+    BRCA1,,,
+    ,17,43044295,43044295
+    TP53,17,7600000,7700000
+    ```
+    """)
+
+    # Download example CSV template
+    sample_csv = "gene_symbol,chromosome,start_position,end_position\nBRCA1,,,\n,17,43044295,43044295\nTP53,17,7600000,7700000"
+
+    st.download_button(
+        label="📥 Download Example CSV",
+        data=sample_csv,
+        file_name="variant_search_example.csv",
+        mime="text/csv"
+    )
+
+    uploaded_file = st.file_uploader(
+        "Upload CSV file",
+        type=['csv'],
+        help="CSV must have gene_symbol, chromosome, start_position, and/or end_position columns"
+    )
+
+    csv_data = None
+    csv_conditions = None
+    csv_params = None
+
+    if uploaded_file:
+        try:
+            csv_df = pd.read_csv(uploaded_file)
+            st.success(f"✅ Loaded {len(csv_df)} rows from CSV")
+
+            # Detect format
+            detected_format = detect_csv_format(csv_df)
+
+            # Validate
+            validation_errors = validate_csv_data(csv_df, detected_format)
+
+            if validation_errors:
+                st.error(f"❌ CSV validation failed with {len(validation_errors)} error(s):")
+                for error in validation_errors[:10]:  # Show first 10 errors
+                    st.error(error)
+                if len(validation_errors) > 10:
+                    st.warning(f"... and {len(validation_errors) - 10} more errors")
+            else:
+                st.success("✅ CSV validation passed")
+
+                # Build query conditions
+                csv_conditions, csv_params = build_query_conditions(csv_df, detected_format)
+                st.info(f"Ready to search {len(csv_conditions)} variant queries")
+
+        except Exception as e:
+            st.error(f"❌ Error processing CSV: {str(e)}")
+
+st.divider()
+
+# Manual Search form
+st.header("Manual Search Parameters")
 
 col1, col2 = st.columns(2)
 
@@ -92,34 +162,41 @@ st.info("You can search by gene alone, position range alone, or combine both for
 
 search_button = st.button("Search Variants", type="primary")
 
-def build_query_and_params():
-    """Build the SQL query with dynamic filters based on user input."""
+def build_query_and_params(use_csv=False):
+    """Build the SQL query with dynamic filters based on user input or CSV."""
     base_query = get_variants_advanced_search()
 
     where_parts = []
     having_parts = []
     params = []
 
-    # Gene filter
-    if gene_symbol and gene_symbol.strip():
-        where_parts.append("UPPER(g.symbol) = UPPER(%s)")
-        params.append(gene_symbol.strip())
+    # Use CSV conditions if available
+    if use_csv and csv_conditions:
+        # Combine all CSV row conditions with OR
+        where_parts.append("(" + " OR ".join(csv_conditions) + ")")
+        params.extend(csv_params)
+    else:
+        # Manual search filters
+        # Gene filter
+        if gene_symbol and gene_symbol.strip():
+            where_parts.append("UPPER(g.symbol) = UPPER(%s)")
+            params.append(gene_symbol.strip())
 
-    # Chromosome filter
-    if chromosome:
-        where_parts.append("vl.chromosome = %s")
-        params.append(chromosome)
+        # Chromosome filter
+        if chromosome:
+            where_parts.append("vl.chromosome = %s")
+            params.append(chromosome)
 
-    # Position range filter
-    if start_pos is not None and end_pos is not None:
-        where_parts.append("vl.position BETWEEN %s AND %s")
-        params.extend([start_pos, end_pos])
-    elif start_pos is not None:
-        where_parts.append("vl.position >= %s")
-        params.append(start_pos)
-    elif end_pos is not None:
-        where_parts.append("vl.position <= %s")
-        params.append(end_pos)
+        # Position range filter
+        if start_pos is not None and end_pos is not None:
+            where_parts.append("vl.position BETWEEN %s AND %s")
+            params.extend([start_pos, end_pos])
+        elif start_pos is not None:
+            where_parts.append("vl.position >= %s")
+            params.append(start_pos)
+        elif end_pos is not None:
+            where_parts.append("vl.position <= %s")
+            params.append(end_pos)
 
     # Frequency filters (optional - only applied if user changes defaults)
     # Uses HAVING since it filters on aggregated values
@@ -137,15 +214,23 @@ def build_query_and_params():
     return final_query, tuple(params)
 
 if search_button:
+    # Determine search mode: CSV or manual
+    use_csv_search = csv_conditions is not None and len(csv_conditions) > 0
+
     # Validate input
-    if not (gene_symbol and gene_symbol.strip()) and not chromosome and start_pos is None and end_pos is None:
-        st.error("⚠️ Please provide at least one search parameter (gene symbol, chromosome, or position range).")
-    elif start_pos is not None and end_pos is not None and start_pos > end_pos:
-        st.error("⚠️ Start position must be less than or equal to end position.")
-    else:
+    if not use_csv_search:
+        # Manual search validation
+        if not (gene_symbol and gene_symbol.strip()) and not chromosome and start_pos is None and end_pos is None:
+            st.error("⚠️ Please provide at least one search parameter (gene symbol, chromosome, or position range) or upload a CSV file.")
+        elif start_pos is not None and end_pos is not None and start_pos > end_pos:
+            st.error("⚠️ Start position must be less than or equal to end position.")
+        else:
+            use_csv_search = False  # Proceed with manual search
+
+    if use_csv_search or (gene_symbol and gene_symbol.strip()) or chromosome or start_pos is not None or end_pos is not None:
         try:
             with st.spinner("Searching database..."):
-                query, params = build_query_and_params()
+                query, params = build_query_and_params(use_csv=use_csv_search)
 
                 if params:
                     results = db.execute_query_with_params(query, params)

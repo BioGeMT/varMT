@@ -177,8 +177,8 @@ if search_button:
                     'reference_allele': 'Ref',
                     'alternate_allele': 'Alt',
                     'rs_id': 'RS ID',
-                    'sample_count': 'Samples',
                     'alternate_allele_count': 'Alt Count',
+                    'allele_number': 'Total Alleles',
                     'ref_allele_freq': 'Ref Freq',
                     'alt_allele_freq': 'Alt Freq',
                     'gnomad_url': 'Gnomad'
@@ -211,12 +211,7 @@ if search_button:
                     }
                 )
 
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**Total rows returned:** {len(results)}")
-                with col2:
-                    total_samples = results['sample_count'].iloc[0] if 'sample_count' in results.columns and len(results) > 0 else 0
-                    st.write(f"**Samples in collection:** {total_samples}")
+                st.write(f"**Total variants returned:** {len(results)}")
 
                 # Download button
                 csv = display_results.to_csv(index=False)

@@ -70,8 +70,20 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                             allele_count = ac_info[i]
                         else:
                             allele_count = ac_info
+                        
+                        genotypes = [sample['GT'] for sample in record.samples.values()]
+                        hom_ref_count = het_count = hom_alt_count = missing_count = 0
+                        for gt in genotypes:
+                            if gt is None or None in gt: # ./., 0/., ...missing genotypes
+                                missing_count += 1
+                            elif gt == (0, 0):
+                                hom_ref_count += 1
+                            elif gt == (i+1, i+1):
+                                hom_alt_count += 1
+                            elif (i+1) in gt and 0 in gt:
+                                het_count += 1
 
-                        cur.execute(insert_variant_frequency(), (variant_id, collection_id, allele_count, an_info))
+                        cur.execute(insert_variant_frequency(), (variant_id, collection_id, allele_count, an_info, hom_ref_count, hom_alt_count, het_count, missing_count))
                     
                     processed += 1
                     if processed % 10000 == 0: # log and commit every 10,000 records

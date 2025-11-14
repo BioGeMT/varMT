@@ -46,7 +46,7 @@ Stores information about different sample collections/populations.
 | sample_count | integer | Number of individual samples in this collection |
 
 ### 4. variant_frequencies
-Junction table that stores the frequency data for variants across different collections.
+Junction table that stores the frequency data and genotype counts for variants across different collections.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -54,6 +54,11 @@ Junction table that stores the frequency data for variants across different coll
 | variant_id | integer | Foreign key to variants table |
 | collection_id | integer | Foreign key to collections table |
 | alternate_allele_count | integer | Count of the alternate allele in this collection |
+| allele_number | integer | Total number of alleles genotyped (2 × samples with non-missing genotypes) |
+| hom_ref_count | integer | Number of homozygous reference genotypes (0/0) |
+| hom_alt_count | integer | Number of homozygous alternate genotypes (1/1, 2/2, etc.) |
+| het_count | integer | Number of heterozygous genotypes (0/1, 0/2, etc.) |
+| missing_count | integer | Number of samples with missing genotypes (./., 0/., etc.) |
 
 ### 5. genes
 Stores gene information.
@@ -93,25 +98,43 @@ A position can be associated with multiple genes. This accounts for overlapping 
 
 ### Calculate allele frequency for a specific variant in a specific collection:
 ```sql
-SELECT v.rs_id, v.alternate_allele, 
-       c.name AS collection_name,
-       vf.alternate_allele_count / (2.0 * c.sample_count) AS allele_frequency
+SELECT v.rs_id, v.alternate_allele,
+       vf.alternate_allele_count::float / vf.allele_number AS allele_frequency,
+       vf.hom_ref_count,
+       vf.het_count,
+       vf.hom_alt_count,
+       vf.missing_count
 FROM variants v
-JOIN variants_frequencies vf ON v.id = vf.variant_id
-JOIN collections c ON vf.collection_id = c.id
+JOIN variant_frequencies vf ON v.id = vf.variant_id
 WHERE v.rs_id = 'rs123456';
 ```
 
 ### Find all variants in a specific gene with their frequencies:
 ```sql
 SELECT g.symbol AS gene, v.rs_id, v.alternate_allele,
-       c.name AS collection,
-       vf.alternate_allele_count / (2.0 * c.sample_count) AS allele_frequency
+       vf.alternate_allele_count::float / vf.allele_number AS allele_frequency,
+       vf.hom_ref_count,
+       vf.het_count,
+       vf.hom_alt_count
 FROM genes g
-JOIN gene_positions gp ON g.id = gp.gene_id
-JOIN positions p ON gp.position_id = p.id
-JOIN variants v ON p.id = v.position_id
-JOIN variants_frequencies vf ON v.id = vf.variant_id
-JOIN collections c ON vf.collection_id = c.id
+JOIN gene_locations gp ON g.id = gp.gene_id
+JOIN variant_locations vl ON gp.variant_location_id = vl.id
+JOIN variants v ON vl.id = v.variant_location_id
+JOIN variant_frequencies vf ON v.id = vf.variant_id
 WHERE g.symbol = 'BRCA1';
+```
+
+### Calculate Hardy-Weinberg equilibrium expectations:
+```sql
+SELECT v.rs_id,
+       vf.alternate_allele_count::float / vf.allele_number AS p_alt,
+       vf.hom_ref_count AS observed_hom_ref,
+       vf.het_count AS observed_het,
+       vf.hom_alt_count AS observed_hom_alt,
+       -- Expected counts under HWE
+       ((vf.allele_number - vf.alternate_allele_count)::float / vf.allele_number)^2 * (vf.hom_ref_count + vf.het_count + vf.hom_alt_count) AS expected_hom_ref,
+       2 * (vf.alternate_allele_count::float / vf.allele_number) * ((vf.allele_number - vf.alternate_allele_count)::float / vf.allele_number) * (vf.hom_ref_count + vf.het_count + vf.hom_alt_count) AS expected_het
+FROM variants v
+JOIN variant_frequencies vf ON v.id = vf.variant_id
+WHERE v.rs_id = 'rs123456';
 ```

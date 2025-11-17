@@ -85,7 +85,10 @@ def get_variants_advanced_search():
         ) as ref_allele_freq,
         ROUND(
             SUM(vf.alternate_allele_count)::numeric / SUM(vf.allele_number), 4
-        ) as alt_allele_freq
+        ) as alt_allele_freq,
+        -- Genotype counts aggregated across all collections
+        SUM(vf.hom_ref_count) as hom_ref_count,
+        SUM(vf.hom_alt_count) as hom_alt_count
     FROM variant_locations vl
     JOIN variants v ON vl.id = v.variant_location_id
     JOIN variant_frequencies vf ON v.id = vf.variant_id

@@ -267,6 +267,8 @@ if search_button:
                     'allele_number': 'Total Alleles',
                     'ref_allele_freq': 'Ref Freq',
                     'alt_allele_freq': 'Alt Freq',
+                    'hom_ref_count': 'Hom Ref',
+                    'hom_alt_count': 'Hom Alt',
                     'gnomad_url': 'Gnomad'
                 }
 

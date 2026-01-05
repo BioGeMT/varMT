@@ -4,12 +4,32 @@ import glob
 from vcf2db_cli import setup_args
 from utils.db_utils import *
 from utils.setup_logging import setup_logging
-from utils.gene_mapping import load_gene_mapping, map_gene_symbols
 
 import pysam
 import psycopg2
 
 logger = setup_logging()
+
+def extract_gene_symbols_from_csq(csq_annotations: tuple) -> set:
+    """
+    Extract unique gene symbols from VEP CSQ annotation field.
+
+    Args:
+        csq_annotations (tuple): The CSQ annotations from record.info['CSQ']
+
+    Returns:
+        set: A set of unique gene symbols
+    """
+    if not csq_annotations:
+        return set()
+
+    gene_symbols = set()
+    for annotation in csq_annotations:
+        fields = annotation.split('|')
+        if len(fields) > 3 and fields[3]:  # Gene symbol is at index 3
+            gene_symbols.add(fields[3])
+
+    return gene_symbols
 
 def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db_host: str, ref_genome: str) -> None:
     """
@@ -18,7 +38,6 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
     logging.info("Trying to process data")
     conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_password, host=db_host)
     logging.info("Connected to the database")
-    gene_mapping = load_gene_mapping()
 
     try:
         if os.path.isdir(vcf_path):
@@ -48,10 +67,10 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                     cur.execute(insert_variant_location(), (chromosome, position, reference, ref_genome))
                     var_location_id = cur.fetchone()[0]
 
-                    ensembl_gene_id = record.info.get("SNPEFF_GENE_NAME", None)
+                    csq_annotations = record.info.get("CSQ", None)
 
-                    if ensembl_gene_id:
-                        gene_symbols = map_gene_symbols(ensembl_gene_id, gene_mapping)
+                    if csq_annotations:
+                        gene_symbols = extract_gene_symbols_from_csq(csq_annotations)
 
                         for symbol in gene_symbols: # a single variant can be associated with multiple genes
                             cur.execute(insert_gene(), (symbol,))

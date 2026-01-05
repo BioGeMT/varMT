@@ -10,12 +10,28 @@ import psycopg2
 
 logger = setup_logging()
 
-def extract_gene_symbols_from_csq(csq_annotations: tuple) -> set:
+def parse_csq_header(vcf_header) -> dict:
+    """
+    Parse CSQ field format from VCF header to create field name to index mapping.
+
+    Args:
+        vcf_header: pysam VCF header object
+
+    Returns:
+        dict: Mapping of field names to their index positions
+    """
+    csq_description = vcf_header.info['CSQ'].description
+    # Extract field names from "Format: Field1|Field2|Field3..."
+    csq_fields = csq_description.split("Format: ")[1].split("|")
+    return {field: i for i, field in enumerate(csq_fields)}
+
+def extract_gene_symbols_from_csq(csq_annotations: tuple, csq_index: dict) -> set:
     """
     Extract unique gene symbols from VEP CSQ annotation field.
 
     Args:
         csq_annotations (tuple): The CSQ annotations from record.info['CSQ']
+        csq_index (dict): Mapping of CSQ field names to indices
 
     Returns:
         set: A set of unique gene symbols
@@ -24,10 +40,16 @@ def extract_gene_symbols_from_csq(csq_annotations: tuple) -> set:
         return set()
 
     gene_symbols = set()
+    symbol_idx = csq_index.get('SYMBOL')
+
+    if symbol_idx is None:
+        logger.warning("SYMBOL field not found in CSQ header")
+        return set()
+
     for annotation in csq_annotations:
         fields = annotation.split('|')
-        if len(fields) > 3 and fields[3]:  # Gene symbol is at index 3
-            gene_symbols.add(fields[3])
+        if len(fields) > symbol_idx and fields[symbol_idx]:
+            gene_symbols.add(fields[symbol_idx])
 
     return gene_symbols
 
@@ -54,10 +76,13 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                 logging.info(f"Processing {vcf_file}")
                 vcf = pysam.VariantFile(vcf_file, 'r')
 
+                # Parse CSQ header once per file
+                csq_index = parse_csq_header(vcf.header) if 'CSQ' in vcf.header.info else None
+
                 sample_count = len(vcf.header.samples)
                 cur.execute(insert_collection(), (sample_count,))
                 collection_id = cur.fetchone()[0]
-                
+
                 processed = 0
                 for record in vcf:
                     chromosome = record.chrom
@@ -69,8 +94,8 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
 
                     csq_annotations = record.info.get("CSQ", None)
 
-                    if csq_annotations:
-                        gene_symbols = extract_gene_symbols_from_csq(csq_annotations)
+                    if csq_annotations and csq_index:
+                        gene_symbols = extract_gene_symbols_from_csq(csq_annotations, csq_index)
 
                         for symbol in gene_symbols: # a single variant can be associated with multiple genes
                             cur.execute(insert_gene(), (symbol,))

@@ -71,7 +71,6 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                         cur.execute(insert_variant(), (var_location_id, rs_id, alt_allele))
                         variant_id = cur.fetchone()[0]
 
-                        # Insert variant annotations
                         if csq_annotations and csq_index:
                             annotations = extract_annotations_from_csq(csq_annotations, csq_index)
                             for ann in annotations:

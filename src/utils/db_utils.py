@@ -118,6 +118,19 @@ def create_tables(dbname: str, user: str, password: str, host: str) -> None:
             );
             """)
 
+    cur.execute("""
+            CREATE TABLE variant_annotations(
+                id SERIAL PRIMARY KEY,
+                variant_id INTEGER NOT NULL,
+                transcript_id TEXT,
+                hgvs_c TEXT,
+                hgvs_p TEXT,
+                consequence TEXT,
+                impact TEXT,
+                FOREIGN KEY (variant_id) REFERENCES variants (id)
+            );
+            """)
+
     conn.commit()
     cur.close()
     conn.close()
@@ -197,6 +210,16 @@ def insert_gene_location() -> str:
                             DO NOTHING
                         """
     return gene_location_insert_query
+
+def insert_variant_annotation() -> str:
+    """
+    Returns the SQL query string for inserting a variant annotation in the 'variant_annotations' table.
+    """
+    variant_annotation_insert_query = """
+                            INSERT INTO variant_annotations (variant_id, transcript_id, hgvs_c, hgvs_p, consequence, impact)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                        """
+    return variant_annotation_insert_query
 
 def create_indexes(dbname: str, user: str, password: str, host: str) -> None:
     """

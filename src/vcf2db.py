@@ -62,10 +62,27 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
 
                     an_info = record.info.get('AN', None)
                     for i, alt_allele in enumerate(record.alts):
-                        rs_id = record.id if record.id else None
+                        rs_id = None
+                        if csq_annotations and csq_index:
+                            rs_id = extract_rsid_from_csq(csq_annotations, csq_index)
+                        if not rs_id: #fall back to VCF ID column if not in CSQ
+                            rs_id = record.id if record.id and record.id != '.' else None
 
                         cur.execute(insert_variant(), (var_location_id, rs_id, alt_allele))
                         variant_id = cur.fetchone()[0]
+
+                        # Insert variant annotations
+                        if csq_annotations and csq_index:
+                            annotations = extract_annotations_from_csq(csq_annotations, csq_index)
+                            for ann in annotations:
+                                cur.execute(insert_variant_annotation(), (
+                                    variant_id,
+                                    ann['transcript_id'],
+                                    ann['hgvs_c'],
+                                    ann['hgvs_p'],
+                                    ann['consequence'],
+                                    ann['impact']
+                                ))
 
                         ac_info = record.info['AC']
                         if isinstance(ac_info, list):

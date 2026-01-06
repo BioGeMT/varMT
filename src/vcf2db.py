@@ -4,54 +4,12 @@ import glob
 from vcf2db_cli import setup_args
 from utils.db_utils import *
 from utils.setup_logging import setup_logging
+from utils.vep_utils import parse_csq_header, extract_gene_symbols_from_csq, extract_rsid_from_csq, extract_annotations_from_csq
 
 import pysam
 import psycopg2
 
 logger = setup_logging()
-
-def parse_csq_header(vcf_header) -> dict:
-    """
-    Parse CSQ field format from VCF header to create field name to index mapping.
-
-    Args:
-        vcf_header: pysam VCF header object
-
-    Returns:
-        dict: Mapping of field names to their index positions
-    """
-    csq_description = vcf_header.info['CSQ'].description
-    # Extract field names from "Format: Field1|Field2|Field3..."
-    csq_fields = csq_description.split("Format: ")[1].split("|")
-    return {field: i for i, field in enumerate(csq_fields)}
-
-def extract_gene_symbols_from_csq(csq_annotations: tuple, csq_index: dict) -> set:
-    """
-    Extract unique gene symbols from VEP CSQ annotation field.
-
-    Args:
-        csq_annotations (tuple): The CSQ annotations from record.info['CSQ']
-        csq_index (dict): Mapping of CSQ field names to indices
-
-    Returns:
-        set: A set of unique gene symbols
-    """
-    if not csq_annotations:
-        return set()
-
-    gene_symbols = set()
-    symbol_idx = csq_index.get('SYMBOL')
-
-    if symbol_idx is None:
-        logger.warning("SYMBOL field not found in CSQ header")
-        return set()
-
-    for annotation in csq_annotations:
-        fields = annotation.split('|')
-        if len(fields) > symbol_idx and fields[symbol_idx]:
-            gene_symbols.add(fields[symbol_idx])
-
-    return gene_symbols
 
 def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db_host: str, ref_genome: str) -> None:
     """

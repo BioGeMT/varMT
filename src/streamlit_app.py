@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(layout="wide")
+
 from utils.streamlit_db import DatabaseClient
 
 # Initialize database client

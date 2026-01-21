@@ -269,6 +269,11 @@ if search_button:
                     'allele_number': 'Total Alleles',
                     'ref_allele_freq': 'Ref Freq',
                     'alt_allele_freq': 'Alt Freq',
+                    'transcript_id': 'Transcript',
+                    'hgvs_c': 'HGVS c.',
+                    'hgvs_p': 'HGVS p.',
+                    'consequence': 'Consequence',
+                    'impact': 'Impact',
                     'gnomad_url': 'Gnomad'
                 }
 
@@ -278,13 +283,51 @@ if search_button:
                 freq_cols = ['Ref Freq', 'Alt Freq']
                 for col in freq_cols:
                     if col in display_results.columns:
-                        display_results[col] = display_results[col].apply(lambda x: f"{x:.4f}")
+                        display_results[col] = display_results[col].apply(lambda x: f"{x:.4f}" if pd.notna(x) else "")
 
-                styled_results = display_results.style.format({
-                    "Position": lambda x : '{:,.0f}'.format(x)
-                },
-                thousands=' '
+                # Create variant grouping key for visual grouping
+                display_results['variant_key'] = (
+                    display_results['Chr'].astype(str) + ':' +
+                    display_results['Position'].astype(str) + ' ' +
+                    display_results['Ref'].astype(str) + '>' +
+                    display_results['Alt'].astype(str)
                 )
+
+                # Sort by variant and impact (HIGH first)
+                display_results = display_results.sort_values(
+                    ['Chr', 'Position', 'Alt', 'Impact'],
+                    ascending=[True, True, True, False],
+                    na_position='last'
+                )
+
+                # Convert numeric columns to formatted strings before blanking
+                if 'Position' in display_results.columns:
+                    display_results['Position'] = display_results['Position'].apply(
+                        lambda x: '{:,.0f}'.format(x).replace(',', ' ') if pd.notna(x) else ''
+                    )
+                if 'Alt Count' in display_results.columns:
+                    display_results['Alt Count'] = display_results['Alt Count'].apply(
+                        lambda x: '{:,.0f}'.format(x) if pd.notna(x) else ''
+                    )
+                if 'Total Alleles' in display_results.columns:
+                    display_results['Total Alleles'] = display_results['Total Alleles'].apply(
+                        lambda x: '{:,.0f}'.format(x) if pd.notna(x) else ''
+                    )
+
+                # Blank out duplicate variant-level columns for visual grouping effect
+                variant_level_cols = ['Chr', 'Position', 'Ref', 'Alt', 'Gene', 'RS ID',
+                                     'Alt Count', 'Total Alleles', 'Ref Freq', 'Alt Freq', 'Gnomad']
+
+                mask = display_results.duplicated(subset=['variant_key'], keep='first')
+
+                for col in variant_level_cols:
+                    if col in display_results.columns:
+                        display_results.loc[mask, col] = ''
+
+                # Drop helper column
+                display_results = display_results.drop(columns=['variant_key'])
+
+                styled_results = display_results
 
                 st.dataframe(
                     styled_results,

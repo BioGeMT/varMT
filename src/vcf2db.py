@@ -74,7 +74,7 @@ def process_data(vcf_path: str, db_name: str, db_user: str, db_password: str, db
                         if csq_annotations and csq_index:
                             annotations = extract_annotations_from_csq(csq_annotations, csq_index)
                             for ann in annotations:
-                                cur.execute(insert_variant_annotation(), (
+                                cur.execute(insert_variant_vep_annotation(), (
                                     variant_id,
                                     ann['transcript_id'],
                                     ann['hgvs_c'],

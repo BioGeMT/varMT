@@ -6,4 +6,8 @@ dependencies:
   - python=3.12
   - psycopg2
   - pysam
+  - streamlit
+  - sqlalchemy
   - pandas
+  - pip: 
+      - streamlit-searchbox

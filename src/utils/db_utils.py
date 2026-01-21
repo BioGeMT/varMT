@@ -251,6 +251,7 @@ def create_indexes(dbname: str, user: str, password: str, host: str) -> None:
         "CREATE INDEX IF NOT EXISTS idx_variant_frequencies_collection_id ON variant_frequencies (collection_id);",
         "CREATE INDEX IF NOT EXISTS idx_gene_locations_gene_id ON gene_locations (gene_id);",
         "CREATE INDEX IF NOT EXISTS idx_gene_locations_variant_location_id ON gene_locations (variant_location_id);"
+        "CREATE INDEX IF NOT EXISTS idx_variant_vep_annotations_variant_id ON variant_vep_annotations (variant_id);"
     ]
 
     try:

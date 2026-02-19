@@ -294,7 +294,7 @@ if 'search_results' in st.session_state and 'search_summary' in st.session_state
 
     event = st.dataframe(
         summary,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         on_select="rerun",
         selection_mode="single-row",

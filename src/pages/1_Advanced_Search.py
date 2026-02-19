@@ -222,7 +222,6 @@ if search_button:
 
     # Validate input
     if not use_csv_search:
-        # Manual search validation
         if not (gene_symbol and gene_symbol.strip()) and not chromosome and start_pos is None and end_pos is None:
             st.error("⚠️ Please provide at least one search parameter (gene symbol, chromosome, or position range) or upload a CSV file.")
         elif start_pos is not None and end_pos is not None and start_pos > end_pos:
@@ -234,130 +233,104 @@ if search_button:
         try:
             with st.spinner("Searching database..."):
                 query, params = build_query_and_params(use_csv=use_csv_search)
-
-                if params:
-                    results = db.execute_query_with_params(query, params)
-                else:
-                    results = db.execute_query(query)
+                results = db.execute_query_with_params(query, params) if params else db.execute_query(query)
 
             if len(results) == 0:
                 st.warning("No variants found matching your search criteria.")
+                st.session_state.pop('search_results', None)
+                st.session_state.pop('search_summary', None)
             else:
-                st.header("Query Results")
+                annotation_cols = ['transcript_id', 'hgvs_c', 'hgvs_p', 'consequence', 'impact']
 
-                display_results = results.copy()
+                # Sort by chromosome, position, alt allele, then impact (HIGH first)
+                impact_order = {'HIGH': 0, 'MODERATE': 1, 'LOW': 2, 'MODIFIER': 3}
+                results = results.copy()
+                results['_impact_rank'] = results['impact'].map(impact_order).fillna(99)
+                results = results.sort_values(
+                    ['chromosome', 'position', 'alternate_allele', '_impact_rank']
+                ).drop(columns=['_impact_rank'])
 
-                # Add Gnomad hyperlink column
-                def create_gnomad_link(row):
-                    chrom = row['chromosome']
-                    pos = row['position']
-                    ref = row['reference_allele']
-                    alt = row['alternate_allele']
-                    return f"https://gnomad.broadinstitute.org/variant/{chrom}-{pos}-{ref}-{alt}"
-
-                display_results['gnomad_url'] = display_results.apply(create_gnomad_link, axis=1)
-
-                # Rename columns for better display
-                column_mapping = {
-                    'gene': 'Gene',
-                    'chromosome': 'Chr',
-                    'position': 'Position',
-                    'reference_allele': 'Ref',
-                    'alternate_allele': 'Alt',
-                    'rs_id': 'RS ID',
-                    'alternate_allele_count': 'Alt Count',
-                    'allele_number': 'Total Alleles',
-                    'ref_allele_freq': 'Ref Freq',
-                    'alt_allele_freq': 'Alt Freq',
-                    'transcript_id': 'Transcript',
-                    'hgvs_c': 'HGVS c.',
-                    'hgvs_p': 'HGVS p.',
-                    'consequence': 'Consequence',
-                    'impact': 'Impact',
-                    'gnomad_url': 'Gnomad'
-                }
-
-                display_results = display_results.rename(columns=column_mapping)
-
-                # Format frequency columns for better readability
-                freq_cols = ['Ref Freq', 'Alt Freq']
-                for col in freq_cols:
-                    if col in display_results.columns:
-                        display_results[col] = display_results[col].apply(lambda x: f"{x:.4f}" if pd.notna(x) else "")
-
-                # Create variant grouping key for visual grouping
-                display_results['variant_key'] = (
-                    display_results['Chr'].astype(str) + ':' +
-                    display_results['Position'].astype(str) + ' ' +
-                    display_results['Ref'].astype(str) + '>' +
-                    display_results['Alt'].astype(str)
+                # Build one-row-per-variant summary dataframe
+                summary = (
+                    results
+                    .drop(columns=annotation_cols)
+                    .drop_duplicates(subset=['chromosome', 'position', 'reference_allele', 'alternate_allele'])
+                    .reset_index(drop=True)
                 )
-
-                # Sort by variant and impact (HIGH first)
-                display_results = display_results.sort_values(
-                    ['Chr', 'Position', 'Alt', 'Impact'],
-                    ascending=[True, True, True, False],
-                    na_position='last'
+                summary['gnomad_url'] = summary.apply(
+                    lambda r: f"https://gnomad.broadinstitute.org/variant/{r['chromosome']}-{r['position']}-{r['reference_allele']}-{r['alternate_allele']}",
+                    axis=1
                 )
+                summary = summary.rename(columns={
+                    'gene': 'Gene', 'chromosome': 'Chr', 'position': 'Position',
+                    'reference_allele': 'Ref', 'alternate_allele': 'Alt', 'rs_id': 'RS ID',
+                    'alternate_allele_count': 'Alt Count', 'allele_number': 'Total Alleles',
+                    'ref_allele_freq': 'Ref Freq', 'alt_allele_freq': 'Alt Freq', 'gnomad_url': 'gnomAD',
+                })
+                for col in ['Ref Freq', 'Alt Freq']:
+                    summary[col] = summary[col].apply(lambda x: round(float(x), 4) if pd.notna(x) else None)
 
-                # Convert numeric columns to formatted strings before blanking
-                if 'Position' in display_results.columns:
-                    display_results['Position'] = display_results['Position'].apply(
-                        lambda x: '{:,.0f}'.format(x).replace(',', ' ') if pd.notna(x) else ''
-                    )
-                if 'Alt Count' in display_results.columns:
-                    display_results['Alt Count'] = display_results['Alt Count'].apply(
-                        lambda x: '{:,.0f}'.format(x) if pd.notna(x) else ''
-                    )
-                if 'Total Alleles' in display_results.columns:
-                    display_results['Total Alleles'] = display_results['Total Alleles'].apply(
-                        lambda x: '{:,.0f}'.format(x) if pd.notna(x) else ''
-                    )
-
-                # Blank out duplicate variant-level columns for visual grouping effect
-                variant_level_cols = ['Chr', 'Position', 'Ref', 'Alt', 'Gene', 'RS ID',
-                                     'Alt Count', 'Total Alleles', 'Ref Freq', 'Alt Freq', 'Gnomad']
-
-                mask = display_results.duplicated(subset=['variant_key'], keep='first')
-
-                for col in variant_level_cols:
-                    if col in display_results.columns:
-                        display_results.loc[mask, col] = ''
-
-                # Drop helper column
-                display_results = display_results.drop(columns=['variant_key'])
-
-                styled_results = display_results
-
-                st.dataframe(
-                    styled_results,
-                    width='stretch',
-                    hide_index=True,
-                    column_config={
-                        "Gnomad": st.column_config.LinkColumn(
-                            "Gnomad",
-                            help="View variant in Gnomad browser",
-                            display_text="View"
-                        )
-                    }
-                )
-
-                st.write(f"**Total variants returned:** {len(results)}")
-
-                # Download button
-                csv = display_results.to_csv(index=False)
-                filename = f"variant_search_{gene_symbol}_{chromosome}" if gene_symbol else f"variant_search_{chromosome}"
-                filename = filename.replace(" ", "_").replace(",", "_") + ".csv"
-
-                st.download_button(
-                    label="Download CSV",
-                    data=csv,
-                    file_name=filename,
-                    mime="text/csv"
-                )
+                # Store in session state so reruns (from row selection) can access them
+                st.session_state['search_results'] = results
+                st.session_state['search_summary'] = summary
+                st.session_state['search_filename'] = (
+                    f"variant_search_{gene_symbol}_{chromosome}" if gene_symbol else f"variant_search_{chromosome}"
+                ).replace(" ", "_").replace(",", "_") + ".csv"
 
         except Exception as e:
             st.error(f"❌ Search failed: {str(e)}")
             st.info("Please check your database connection and ensure the database contains data.")
             with st.expander("Error Details"):
                 st.code(str(e))
+
+# Render results (persists across reruns triggered by row selection)
+if 'search_results' in st.session_state and 'search_summary' in st.session_state:
+    results = st.session_state['search_results']
+    summary = st.session_state['search_summary']
+    annotation_cols = ['transcript_id', 'hgvs_c', 'hgvs_p', 'consequence', 'impact']
+
+    st.header("Query Results")
+    st.caption("Click a row to see annotation details below.")
+
+    event = st.dataframe(
+        summary,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        column_config={
+            "gnomAD": st.column_config.LinkColumn(
+                "gnomAD",
+                help="View variant in gnomAD browser",
+                display_text="View"
+            )
+        }
+    )
+
+    # Annotation detail panel
+    selected_rows = event.selection.rows
+    if selected_rows:
+        sel = summary.iloc[selected_rows[0]]
+        chrom, pos, ref, alt = sel['Chr'], sel['Position'], sel['Ref'], sel['Alt']
+
+        mask = (
+            (results['chromosome'] == chrom) &
+            (results['position'] == pos) &
+            (results['reference_allele'] == ref) &
+            (results['alternate_allele'] == alt)
+        )
+        ann_df = results.loc[mask, annotation_cols].reset_index(drop=True)
+        ann_df.columns = ['Transcript', 'HGVS c.', 'HGVS p.', 'Consequence', 'Impact']
+        ann_df = ann_df.fillna('—')
+
+        with st.expander(f"Annotations: {chrom}:{pos} {ref} > {alt}", expanded=True):
+            st.dataframe(ann_df, hide_index=True, use_container_width=True)
+
+    # Download button
+    csv = results.to_csv(index=False)
+    st.download_button(
+        label="Download CSV",
+        data=csv,
+        file_name=st.session_state.get('search_filename', 'variant_search.csv'),
+        mime="text/csv"
+    )

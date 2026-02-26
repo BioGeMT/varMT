@@ -261,6 +261,9 @@ if search_button:
                     lambda r: f"https://gnomad.broadinstitute.org/variant/{r['chromosome']}-{r['position']}-{r['reference_allele']}-{r['alternate_allele']}",
                     axis=1
                 )
+                summary['rs_id'] = summary['rs_id'].apply(
+                    lambda rs: f"https://www.ncbi.nlm.nih.gov/snp/{rs}" if pd.notna(rs) and rs else None
+                )
                 summary = summary.rename(columns={
                     'gene': 'Gene', 'chromosome': 'Chr', 'position': 'Position',
                     'reference_allele': 'Ref', 'alternate_allele': 'Alt', 'rs_id': 'RS ID',
@@ -303,6 +306,12 @@ if 'search_results' in st.session_state and 'search_summary' in st.session_state
                 "gnomAD",
                 help="View variant in gnomAD browser",
                 display_text="View"
+            ),
+            "RS ID": st.column_config.LinkColumn(
+                "RS ID",
+                help="View in dbSNP database",
+                validate=r"^https://www\.ncbi\.nlm\.nih\.gov/snp/rs\d+$",
+                display_text=r"https://www\.ncbi\.nlm\.nih\.gov/snp/(.*)"
             )
         }
     )

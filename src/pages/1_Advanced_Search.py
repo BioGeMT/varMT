@@ -324,7 +324,7 @@ if 'search_results' in st.session_state and 'search_summary' in st.session_state
         ann_df = ann_df.fillna('—')
 
         with st.expander(f"Annotations: {chrom}:{pos} {ref} > {alt}", expanded=True):
-            st.dataframe(ann_df, hide_index=True, use_container_width=True)
+            st.dataframe(ann_df, hide_index=True, width='stretch')
 
     # Download button
     csv = results.to_csv(index=False)

@@ -330,10 +330,25 @@ if 'search_results' in st.session_state and 'search_summary' in st.session_state
         )
         ann_df = results.loc[mask, annotation_cols].reset_index(drop=True)
         ann_df.columns = ['Transcript', 'HGVS c.', 'HGVS p.', 'Consequence', 'Impact']
+        ann_df['Transcript'] = ann_df['Transcript'].apply(
+            lambda t: f"https://www.ensembl.org/id/{t}" if pd.notna(t) and t != '—' else None
+        )
         ann_df = ann_df.fillna('—')
 
         with st.expander(f"Annotations: {chrom}:{pos} {ref} > {alt}", expanded=True):
-            st.dataframe(ann_df, hide_index=True, width='stretch')
+            st.dataframe(
+                ann_df,
+                hide_index=True,
+                width='stretch',
+                column_config={
+                    "Transcript": st.column_config.LinkColumn(
+                        "Transcript",
+                        help="View in Ensembl",
+                        validate=r"^https://www\.ensembl\.org/id/.*$",
+                        display_text=r"https://www\.ensembl\.org/id/(.*)"
+                    )
+                }
+            )
 
     # Download button
     csv = results.to_csv(index=False)

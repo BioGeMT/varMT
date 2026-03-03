@@ -1,6 +1,4 @@
 import streamlit as st
-st.set_page_config(layout="wide")
-
 from streamlit_searchbox import st_searchbox
 import pandas as pd
 
@@ -8,7 +6,7 @@ from utils.streamlit_db import DatabaseClient
 from queries.variant_queries import get_variants_advanced_search
 from utils.csv_parser import detect_csv_format, validate_csv_data, build_query_conditions
 
-st.set_page_config(page_title="Advanced Variant Search")
+st.set_page_config(page_title="Advanced Variant Search", layout="wide")
 
 db = DatabaseClient()
 

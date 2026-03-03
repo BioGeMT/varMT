@@ -4,7 +4,7 @@ import pandas as pd
 
 from utils.streamlit_db import DatabaseClient
 from queries.variant_queries import get_variants_advanced_search
-from utils.csv_parser import detect_csv_format, validate_csv_data, build_query_conditions
+from utils.csv_parser import validate_csv_columns, get_required_columns, validate_csv_data, build_query_conditions
 
 st.set_page_config(page_title="Advanced Variant Search", layout="wide")
 
@@ -38,21 +38,25 @@ with st.expander("📁 Bulk Search via CSV Upload", expanded=False):
 
     **Required columns (case-insensitive):**
     - `gene_symbol`: Gene symbol (e.g., BRCA1, TP53)
+    - `rs_id`: dbSNP rsID (e.g., rs80357906)
     - `chromosome`: Chromosome (1-22, X, Y, MT)
     - `start_position`: Start position (for single positions, set start = end)
     - `end_position`: End position
 
+    Each row must have at least one of: `gene_symbol`, `rs_id`, or `chromosome + start_position + end_position`. Leave unused cells empty.
+
     **Example CSV:**
     ```
-    gene_symbol,chromosome,start_position,end_position
-    BRCA1,,,
-    ,17,43044295,43044295
-    TP53,17,7600000,7700000
+    gene_symbol,rs_id,chromosome,start_position,end_position
+    BRCA1,,,,
+    ,rs80357906,,,
+    ,,17,43044295,43044295
+    TP53,,17,7600000,7700000
     ```
     """)
 
     # Download example CSV template
-    sample_csv = "gene_symbol,chromosome,start_position,end_position\nBRCA1,,,\n,17,43044295,43044295\nTP53,17,7600000,7700000"
+    sample_csv = "gene_symbol,rs_id,chromosome,start_position,end_position\nBRCA1,,,,\n,rs80357906,,,\n,,17,43044295,43044295\nTP53,,17,7600000,7700000"
 
     st.download_button(
         label="📥 Download Example CSV",
@@ -64,7 +68,7 @@ with st.expander("📁 Bulk Search via CSV Upload", expanded=False):
     uploaded_file = st.file_uploader(
         "Upload CSV file",
         type=['csv'],
-        help="CSV must have gene_symbol, chromosome, start_position, and/or end_position columns"
+        help="CSV must have exactly these columns: gene_symbol, rs_id, chromosome, start_position, end_position"
     )
 
     csv_data = None
@@ -76,11 +80,17 @@ with st.expander("📁 Bulk Search via CSV Upload", expanded=False):
             csv_df = pd.read_csv(uploaded_file)
             st.success(f"✅ Loaded {len(csv_df)} rows from CSV")
 
-            # Detect format
-            detected_format = detect_csv_format(csv_df)
+            errors_required_not_in, errors_provided_not_in = validate_csv_columns(csv_df)
 
-            # Validate
-            validation_errors = validate_csv_data(csv_df, detected_format)
+            if errors_required_not_in:
+                st.error(f"❌ Provided CSV is missing the following expected columns: {errors_required_not_in}.")
+
+            if errors_provided_not_in:
+                st.error(f"❌ Provided CSV contains unexpected columns: {errors_provided_not_in}. Expected columns: {get_required_columns()}")
+
+            if not errors_required_not_in and not errors_provided_not_in:
+                # Validate row data
+                validation_errors = validate_csv_data(csv_df)
 
             if validation_errors:
                 st.error(f"❌ CSV validation failed with {len(validation_errors)} error(s):")
@@ -92,7 +102,7 @@ with st.expander("📁 Bulk Search via CSV Upload", expanded=False):
                 st.success("✅ CSV validation passed")
 
                 # Build query conditions
-                csv_conditions, csv_params = build_query_conditions(csv_df, detected_format)
+                    csv_conditions, csv_params = build_query_conditions(csv_df)
                 st.info(f"Ready to search {len(csv_conditions)} variant queries")
 
         except Exception as e:

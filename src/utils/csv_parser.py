@@ -1,68 +1,55 @@
+import re
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import List, Tuple
 
+REQUIRED_COLUMNS = ['gene_symbol', 'rs_id', 'chromosome', 'start_position', 'end_position']
 
-# Standard column names (case-insensitive)
-REQUIRED_COLUMNS = {
-    'gene_symbol': 'gene_symbol',
-    'chromosome': 'chromosome',
-    'start_position': 'start_position',
-    'end_position': 'end_position'
-}
+def get_required_columns():
+    return REQUIRED_COLUMNS
 
-
-def detect_csv_format(df: pd.DataFrame) -> Dict[str, Optional[str]]:
+def validate_csv_columns(df: pd.DataFrame) -> Tuple[List[str], List[str]]:
     """
-    Detect which standard columns are present in the CSV.
-    Column names must match exactly (case-insensitive).
+    Check that all required columns are in the given CSV, and that the provided columns are in the expected column names
 
     Args:
         df: DataFrame loaded from CSV
 
     Returns:
-        Dictionary mapping standard column names to actual column names in CSV,
-        or None if column is not present
-
-    Raises:
-        ValueError: If CSV has unrecognized columns or invalid format
-
-    Example:
-        {
-            'gene_symbol': 'gene_symbol',
-            'chromosome': 'Chromosome',
-            'start_position': 'start_position',
-            'end_position': 'end_position'
-        }
+        Tuple of lists
     """
-    columns_lower = {col.lower(): col for col in df.columns}
+    errors_required_not_in = []
+    errors_provided_not_in = []
+    columns_provided = set(df.columns)
 
-    detected = {}
-    for standard_name in REQUIRED_COLUMNS.keys():
-        # Check if this column exists (case-insensitive)
-        actual_name = columns_lower.get(standard_name.lower())
-        detected[standard_name] = actual_name
+    for required_column in REQUIRED_COLUMNS:
+        if required_column not in columns_provided:
+            errors_required_not_in.append(required_column)
 
-    return detected
+    for column_provided in columns_provided:
+        if column_provided.lower() not in REQUIRED_COLUMNS:
+            errors_provided_not_in.append(column_provided)
+
+    return errors_required_not_in, errors_provided_not_in
 
 
-def validate_csv_data(df: pd.DataFrame, detected_format: Dict[str, Optional[str]]) -> List[str]:
+def validate_csv_data(df: pd.DataFrame) -> List[str]:
     """
     Validate CSV data for correctness and valid query combinations.
 
     Args:
         df: DataFrame loaded from CSV
-        detected_format: Output from detect_csv_format()
 
     Returns:
         List of error messages (empty if validation passes)
 
     Validation rules:
         - Each row must have at least one valid query type
+        - Valid query types: gene_symbol | rs_id | (chromosome + start_position + end_position)
         - Chromosome + position queries require both start_position and end_position
         - Chromosome values must be valid (1-22, X, Y, MT)
         - Position values must be positive integers
         - start_position <= end_position (can be equal for single position)
-        - Gene symbols must be non-empty strings
+        - rs_id must be in format rs<digits> (e.g. rs80357906)
     """
     errors = []
 
@@ -70,24 +57,19 @@ def validate_csv_data(df: pd.DataFrame, detected_format: Dict[str, Optional[str]
     valid_chromosomes = set([str(i) for i in range(1, 23)] + ['X', 'Y', 'MT', 'chrX', 'chrY', 'chrMT'])
     valid_chromosomes.update([f'chr{i}' for i in range(1, 23)])
 
-    # Get actual column names from detected format
-    gene_col = detected_format.get('gene_symbol')
-    chr_col = detected_format.get('chromosome')
-    start_col = detected_format.get('start_position')
-    end_col = detected_format.get('end_position')
-
     for idx, row in df.iterrows():
-        row_num = idx + 2  # +2 because: +1 for header, +1 for 0-indexed
+        row_num = idx + 2  # skip header
 
         # Check what columns are present in this row (non-null)
-        has_gene = gene_col and pd.notna(row.get(gene_col))
-        has_chr = chr_col and pd.notna(row.get(chr_col))
-        has_start = start_col and pd.notna(row.get(start_col))
-        has_end = end_col and pd.notna(row.get(end_col))
+        has_gene = pd.notna(row.get('gene_symbol')) and str(row.get('gene_symbol', '')).strip()
+        has_rs_id = pd.notna(row.get('rs_id')) and str(row.get('rs_id', '')).strip()
+        has_chr = pd.notna(row.get('chromosome')) and str(row.get('chromosome', '')).strip()
+        has_start = pd.notna(row.get('start_position'))
+        has_end = pd.notna(row.get('end_position'))
 
         # Rule 1: Each row must have at least one valid query type
-        if not (has_gene or (has_chr and has_start and has_end)):
-            errors.append(f"Row {row_num}: Must have gene_symbol OR (chromosome + start_position + end_position)")
+        if not (has_gene or has_rs_id or (has_chr and has_start and has_end)):
+            errors.append(f"Row {row_num}: Must have gene_symbol OR rs_id OR (chromosome + start_position + end_position)")
             continue
 
         # Rule 2: If using position queries, must have chromosome AND both start and end
@@ -99,17 +81,23 @@ def validate_csv_data(df: pd.DataFrame, detected_format: Dict[str, Optional[str]
             errors.append(f"Row {row_num}: start_position and end_position require chromosome")
             continue
 
+        # Validate rs_id format
+        if has_rs_id:
+            rs_value = str(row['rs_id']).strip()
+            if not re.match(r'^rs\d+$', rs_value):
+                errors.append(f"Row {row_num}: rs_id '{rs_value}' is not valid. Must be in format rs<digits> (e.g. rs80357906)")
+
         # Validate chromosome value
         if has_chr:
-            chr_value = str(row[chr_col]).strip()
+            chr_value = str(row['chromosome']).strip()
             if chr_value not in valid_chromosomes:
                 errors.append(f"Row {row_num}: Invalid chromosome '{chr_value}'. Must be 1-22, X, Y, or MT")
 
         # Validate start and end positions
         if has_start and has_end:
             try:
-                start_value = int(row[start_col])
-                end_value = int(row[end_col])
+                start_value = int(row['start_position'])
+                end_value = int(row['end_position'])
 
                 if start_value <= 0 or end_value <= 0:
                     errors.append(f"Row {row_num}: start_position and end_position must be positive integers")
@@ -118,23 +106,16 @@ def validate_csv_data(df: pd.DataFrame, detected_format: Dict[str, Optional[str]
             except (ValueError, TypeError):
                 errors.append(f"Row {row_num}: start_position and end_position must be valid integers")
 
-        # Validate gene symbol is non-empty
-        if has_gene:
-            gene_value = str(row[gene_col]).strip()
-            if not gene_value:
-                errors.append(f"Row {row_num}: gene_symbol cannot be empty")
-
     return errors
 
 
-def build_query_conditions(df: pd.DataFrame, detected_format: Dict[str, Optional[str]]) -> Tuple[List[str], List]:
+def build_query_conditions(df: pd.DataFrame) -> Tuple[List[str], List]:
     """
     Build SQL WHERE conditions from CSV rows.
     Each row becomes a set of conditions combined with OR.
 
     Args:
         df: DataFrame loaded from CSV (must be validated first)
-        detected_format: Output from detect_csv_format()
 
     Returns:
         Tuple of (where_conditions, params):
@@ -144,41 +125,41 @@ def build_query_conditions(df: pd.DataFrame, detected_format: Dict[str, Optional
     Example output:
         where_conditions = [
             "(UPPER(g.symbol) = UPPER(%s))",
+            "(v.rs_id = %s)",
             "(vl.chromosome = %s AND vl.position BETWEEN %s AND %s)",
-            "(UPPER(g.symbol) = UPPER(%s) AND vl.chromosome = %s AND vl.position BETWEEN %s AND %s)"
         ]
-        params = ['BRCA1', '17', 43000000, 44000000, 'TP53', '17', 7675088, 7675088]
+        params = ['BRCA1', 'rs80357906', '17', 43000000, 44000000]
     """
     conditions = []
     params = []
 
-    # Get actual column names from detected format
-    gene_col = detected_format.get('gene_symbol')
-    chr_col = detected_format.get('chromosome')
-    start_col = detected_format.get('start_position')
-    end_col = detected_format.get('end_position')
-
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         row_conditions = []
 
         # Check what columns are present in this row (non-null)
-        has_gene = gene_col and pd.notna(row.get(gene_col))
-        has_chr = chr_col and pd.notna(row.get(chr_col))
-        has_start = start_col and pd.notna(row.get(start_col))
-        has_end = end_col and pd.notna(row.get(end_col))
+        has_gene = pd.notna(row.get('gene_symbol')) and str(row.get('gene_symbol', '')).strip()
+        has_rs_id = pd.notna(row.get('rs_id')) and str(row.get('rs_id', '')).strip()
+        has_chr = pd.notna(row.get('chromosome')) and str(row.get('chromosome', '')).strip()
+        has_start = pd.notna(row.get('start_position'))
+        has_end = pd.notna(row.get('end_position'))
 
         # Build gene condition
         if has_gene:
             row_conditions.append("UPPER(g.symbol) = UPPER(%s)")
-            params.append(str(row[gene_col]).strip())
+            params.append(str(row['gene_symbol']).strip())
+
+        # Build rs_id condition
+        if has_rs_id:
+            row_conditions.append("v.rs_id = %s")
+            params.append(str(row['rs_id']).strip())
 
         # Build position condition
         if has_chr and has_start and has_end:
             row_conditions.append("vl.chromosome = %s AND vl.position BETWEEN %s AND %s")
             params.extend([
-                str(row[chr_col]).strip(),
-                int(row[start_col]),
-                int(row[end_col])
+                str(row['chromosome']).strip(),
+                int(row['start_position']),
+                int(row['end_position'])
             ])
 
         # Combine conditions for this row with AND

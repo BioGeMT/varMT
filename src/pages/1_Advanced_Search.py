@@ -92,18 +92,18 @@ with st.expander("📁 Bulk Search via CSV Upload", expanded=False):
                 # Validate row data
                 validation_errors = validate_csv_data(csv_df)
 
-            if validation_errors:
-                st.error(f"❌ CSV validation failed with {len(validation_errors)} error(s):")
-                for error in validation_errors[:10]:  # Show first 10 errors
-                    st.error(error)
-                if len(validation_errors) > 10:
-                    st.warning(f"... and {len(validation_errors) - 10} more errors")
-            else:
-                st.success("✅ CSV validation passed")
+                if validation_errors:
+                    st.error(f"❌ CSV validation failed with {len(validation_errors)} error(s):")
+                    for error in validation_errors[:10]:  # Show first 10 errors
+                        st.error(error)
+                    if len(validation_errors) > 10:
+                        st.warning(f"... and {len(validation_errors) - 10} more errors")
+                else:
+                    st.success("✅ CSV validation passed")
 
-                # Build query conditions
+                    # Build query conditions
                     csv_conditions, csv_params = build_query_conditions(csv_df)
-                st.info(f"Ready to search {len(csv_conditions)} variant queries")
+                    st.info(f"Ready to search {len(csv_conditions)} variant queries")
 
         except Exception as e:
             st.error(f"❌ Error processing CSV: {str(e)}")

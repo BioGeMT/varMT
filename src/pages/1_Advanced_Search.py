@@ -268,10 +268,10 @@ if search_button:
                     'gene': 'Gene', 'chromosome': 'Chr', 'position': 'Position',
                     'reference_allele': 'Ref', 'alternate_allele': 'Alt', 'rs_id': 'RS ID',
                     'alternate_allele_count': 'Alt Count', 'allele_number': 'Total Alleles',
-                    'ref_allele_freq': 'Ref Freq', 'alt_allele_freq': 'Alt Freq', 'gnomad_url': 'gnomAD',
+                    'ref_allele_freq': 'Ref Freq (MT)', 'alt_allele_freq': 'Alt Freq (MT)', 'gnomad_url': 'gnomAD',
                 })
-                for col in ['Ref Freq', 'Alt Freq']:
-                    summary[col] = summary[col].apply(lambda x: round(float(x), 4) if pd.notna(x) else None)
+                for col in ['Ref Freq (MT)', 'Alt Freq (MT)']:
+                    summary[col] = summary[col].apply(lambda x: round(float(x), 2) if pd.notna(x) else None)
 
                 # Store in session state so reruns (from row selection) can access them
                 st.session_state['search_results'] = results

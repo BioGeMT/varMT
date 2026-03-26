@@ -111,18 +111,11 @@ with st.expander("📁 Bulk Search via CSV Upload", expanded=False):
 st.divider()
 
 # Manual Search form
-st.header("Manual Search Parameters")
+st.header("Search Parameters")
 
-col1, col2 = st.columns(2)
+col1, col2 = st.columns(2, border=True)
 
 with col1:
-    gene_symbol = st_searchbox(
-        search_genes,
-        placeholder="e.g., BRCA1, TP53, APOE",
-        label="Gene Symbol",
-        key="gene_searchbox"
-    )
-
     chromosome = st.selectbox(
         "Chromosome (optional)",
         options=[""] + [
@@ -132,7 +125,6 @@ with col1:
         ],
     )
 
-with col2:
     start_pos = st.number_input(
         "Start Position (optional)",
         min_value=1,
@@ -145,29 +137,37 @@ with col2:
         value=None,
     )
 
+with col2:
+    gene_symbol = st_searchbox(
+        search_genes,
+        placeholder="e.g., BRCA1, TP53, APOE",
+        label="Gene Symbol",
+        key="gene_searchbox"
+    )
+    with st.expander("Advanced Filters (Optional)", expanded=False):
+        freq_col1, freq_col2 = st.columns(2)
+
+        with freq_col1:
+            min_alt_freq = st.number_input(
+                "Min Alt Frequency",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.0,
+                step=0.01,
+                format="%.3f"
+            )
+
+        with freq_col2:
+            max_alt_freq = st.number_input(
+                "Max Alt Frequency",
+                min_value=0.0,
+                max_value=1.0,
+                value=1.0,
+                step=0.01,
+                format="%.3f"
+            )
 # Frequency filters in collapsible section
-with st.expander("Advanced Filters (Optional)", expanded=False):
-    freq_col1, freq_col2 = st.columns(2)
 
-    with freq_col1:
-        min_alt_freq = st.number_input(
-            "Min Alt Frequency",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.0,
-            step=0.01,
-            format="%.3f"
-        )
-
-    with freq_col2:
-        max_alt_freq = st.number_input(
-            "Max Alt Frequency",
-            min_value=0.0,
-            max_value=1.0,
-            value=1.0,
-            step=0.01,
-            format="%.3f"
-        )
 
 st.info("You can search by gene alone, position range alone, or combine both for more specific results.")
 

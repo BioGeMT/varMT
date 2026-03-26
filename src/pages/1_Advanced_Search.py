@@ -279,7 +279,7 @@ if search_button:
                     'ref_allele_freq': 'Ref Freq (MT)', 'alt_allele_freq': 'Alt Freq (MT)', 'gnomad_url': 'gnomAD',
                 })
                 for col in ['Ref Freq (MT)', 'Alt Freq (MT)']:
-                    summary[col] = summary[col].apply(lambda x: round(float(x), 2) if pd.notna(x) else None)
+                    summary[col] = summary[col].apply(lambda x: f"{float(x):.2f}" if pd.notna(x) else None)
 
                 # Store in session state so reruns (from row selection) can access them
                 st.session_state['search_results'] = results

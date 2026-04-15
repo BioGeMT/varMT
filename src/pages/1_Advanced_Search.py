@@ -166,8 +166,6 @@ with col2:
                 step=0.01,
                 format="%.3f"
             )
-# Frequency filters in collapsible section
-
 
 st.info("You can search by gene alone, position range alone, or combine both for more specific results.")
 

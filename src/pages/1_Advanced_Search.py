@@ -117,7 +117,7 @@ col1, col2 = st.columns(2, border=True)
 
 with col1:
     chromosome = st.selectbox(
-        "Chromosome (optional)",
+        label = "Chromosome (optional)",
         options=[""] + [
             "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
             "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
@@ -126,13 +126,13 @@ with col1:
     )
 
     start_pos = st.number_input(
-        "Start Position (optional)",
+        label = "Start Position (optional)",
         min_value=1,
         value=None,
     )
 
     end_pos = st.number_input(
-        "End Position (optional)",
+        label = "End Position (optional) (required if chromosome is provided)",
         min_value=1,
         value=None,
     )

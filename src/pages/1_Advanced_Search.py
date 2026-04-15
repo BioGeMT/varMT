@@ -117,7 +117,7 @@ col1, col2 = st.columns(2, border=True)
 
 with col1:
     chromosome = st.selectbox(
-        label = "Chromosome (optional)",
+        label = "**Chromosome** (optional)",
         options=[""] + [
             "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
             "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
@@ -126,13 +126,13 @@ with col1:
     )
 
     start_pos = st.number_input(
-        label = "Start Position (optional)",
+        label = "**Start Position** (optional)",
         min_value=1,
         value=None,
     )
 
     end_pos = st.number_input(
-        label = "End Position (optional) (required if chromosome is provided)",
+        label = "**End Position** (optional)",
         min_value=1,
         value=None,
     )
@@ -141,7 +141,7 @@ with col2:
     gene_symbol = st_searchbox(
         search_genes,
         placeholder="e.g., BRCA1, TP53, APOE",
-        label="Gene Symbol",
+        label="Gene Symbol (optional)",
         key="gene_searchbox"
     )
     with st.expander("Advanced Filters (Optional)", expanded=False):
@@ -230,8 +230,13 @@ if search_button:
     if not use_csv_search:
         if not (gene_symbol and gene_symbol.strip()) and not chromosome and start_pos is None and end_pos is None:
             st.error("⚠️ Please provide at least one search parameter (gene symbol, chromosome, or position range) or upload a CSV file.")
+            st.stop()
+        elif chromosome and not (gene_symbol and gene_symbol.strip()) and start_pos is None and end_pos is None:
+            st.error("⚠️ Chromosome provided without position. Please provide also a position range or gene symbol.")
+            st.stop()
         elif start_pos is not None and end_pos is not None and start_pos > end_pos:
             st.error("⚠️ Start position must be less than or equal to end position.")
+            st.stop()
         else:
             use_csv_search = False  # Proceed with manual search
 

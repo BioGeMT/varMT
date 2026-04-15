@@ -29,7 +29,7 @@ def search_genes(search_term: str) -> list[str]:
     suggestions = load_genes_suggestions()
     search_term_upper = search_term.upper()
     matches = [gene for gene in suggestions if search_term_upper in gene.upper()]
-    return matches[:10]  # Limit to top 10 matches
+    return matches[:7]  # Limit to top 7 matches
 
 # CSV Upload Section
 with st.expander("📁 Bulk Search via CSV Upload", expanded=False):

@@ -66,6 +66,21 @@ ssh -L 1455:localhost:8502 user@server
 
 Then open [http://localhost:1455](http://localhost:1455) on your local machine.
 
+Every variant search requires a chromosome and an inclusive start/end interval
+of at most 5,000 bases (`end - start + 1`). Gene symbols and CSV rsIDs only narrow
+that interval. CSV rows must all fit within one 5 kb window on the same chromosome;
+unbounded gene searches and searches spanning multiple windows are rejected.
+
+The shared limit is configured in `config/browser_policy.yml`:
+
+```yaml
+query:
+  max_interval_bases: 5000
+```
+
+Restart Streamlit after changing it. For Docker, rebuild the image and
+replace the container, retaining the database volume.
+
 ### Adding more collections
 
 Just run `./docker/ingest.sh /path/to/another.vcf` again — collections accumulate over time. No need to restart the container or recreate indexes.
@@ -170,6 +185,7 @@ varMT/
 │       ├── csv_parser.py        # CSV/gene mapping file parser
 │       └── setup_logging.py     # Logging configuration
 ├── config/
+│   ├── browser_policy.yml       # Shared browser query limit (tracked)
 │   └── db_connection.yml        # Local Streamlit DB config (not tracked)
 ├── tests/                       # Pytest suite
 ├── res/

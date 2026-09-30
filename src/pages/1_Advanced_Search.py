@@ -5,6 +5,8 @@ import pandas as pd
 from utils.streamlit_db import DatabaseClient
 from queries.variant_queries import get_variants_advanced_search
 from utils.csv_parser import validate_csv_columns, get_required_columns, validate_csv_data, build_query_conditions
+from utils.browser_policy import MAX_QUERY_BASES
+from utils.query_limits import validate_query_window
 
 st.set_page_config(page_title="Advanced Variant Search", layout="wide")
 
@@ -18,6 +20,7 @@ st.html("""
 """)
 
 db = DatabaseClient()
+query_limit_label = f"{MAX_QUERY_BASES / 1000:g} kb"
 
 st.title("Advanced Variant Search")
 st.write("Search variants by gene symbol, chromosome, and/or position range with detailed frequency analysis.")
@@ -42,8 +45,16 @@ def search_genes(search_term: str) -> list[str]:
 
 # CSV Upload Section
 with st.expander("📁 Bulk Search via CSV Upload", expanded=False):
-    st.markdown("""
-    Upload a CSV file to search for multiple variants at once.
+    sample_start = 43044295
+    sample_end = sample_start + MAX_QUERY_BASES - 1
+    sample_csv = (
+        "gene_symbol,rs_id,chromosome,start_position,end_position\n"
+        f"BRCA1,,17,{sample_start},{sample_end}\n"
+        f",,17,{sample_start},{sample_start}"
+    )
+
+    st.markdown(f"""
+    Upload a CSV file to search within one window of at most {MAX_QUERY_BASES:,} bases ({query_limit_label}) on one chromosome.
 
     **Required columns (case-insensitive):**
     - `gene_symbol`: Gene symbol (e.g., BRCA1, TP53)
@@ -52,21 +63,13 @@ with st.expander("📁 Bulk Search via CSV Upload", expanded=False):
     - `start_position`: Start position (for single positions, set start = end)
     - `end_position`: End position
 
-    Each row must have at least one of: `gene_symbol`, `rs_id`, or `chromosome + start_position + end_position`. Leave unused cells empty.
-
-    **Example CSV:**
-    ```
-    gene_symbol,rs_id,chromosome,start_position,end_position
-    BRCA1,,,,
-    ,rs80357906,,,
-    ,,17,43044295,43044295
-    TP53,,17,7600000,7700000
-    ```
+    Every row requires `chromosome`, `start_position`, and `end_position`.
+    Gene symbols and rsIDs are optional filters. All rows together must fit within one {query_limit_label} window.
     """)
+    st.markdown("**Example CSV:**")
+    st.code(sample_csv, language="csv")
 
     # Download example CSV template
-    sample_csv = "gene_symbol,rs_id,chromosome,start_position,end_position\nBRCA1,,,,\n,rs80357906,,,\n,,17,43044295,43044295\nTP53,,17,7600000,7700000"
-
     st.download_button(
         label="📥 Download Example CSV",
         data=sample_csv,
@@ -86,7 +89,7 @@ with st.expander("📁 Bulk Search via CSV Upload", expanded=False):
 
     if uploaded_file:
         try:
-            csv_df = pd.read_csv(uploaded_file)
+            csv_df = pd.read_csv(uploaded_file, dtype={'chromosome': str})
             st.success(f"✅ Loaded {len(csv_df)} rows from CSV")
 
             errors_required_not_in, errors_provided_not_in = validate_csv_columns(csv_df)
@@ -126,7 +129,7 @@ col1, col2 = st.columns(2, border=True)
 
 with col1:
     chromosome = st.selectbox(
-        label = "**Chromosome** (optional)",
+        label = "**Chromosome** (required)",
         options=[""] + [
             "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
             "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
@@ -135,13 +138,13 @@ with col1:
     )
 
     start_pos = st.number_input(
-        label = "**Start Position** (optional)",
+        label = "**Start Position** (required)",
         min_value=1,
         value=None,
     )
 
     end_pos = st.number_input(
-        label = "**End Position** (optional)",
+        label = "**End Position** (required)",
         min_value=1,
         value=None,
     )
@@ -176,7 +179,7 @@ with col2:
                 format="%.3f"
             )
 
-st.info("You can search by gene alone, position range alone, or combine both for more specific results.")
+st.info(f"Every search requires a chromosome and a start/end interval of at most {MAX_QUERY_BASES:,} bases ({query_limit_label}), inclusive. A gene symbol optionally narrows that interval.")
 
 search_button = st.button("Search Variants", type="primary")
 
@@ -194,6 +197,7 @@ def build_query_and_params(use_csv=False):
         where_parts.append("(" + " OR ".join(csv_conditions) + ")")
         params.extend(csv_params)
     else:
+        query_chromosome, query_start, query_end = validate_query_window(chromosome, start_pos, end_pos, limit=MAX_QUERY_BASES)
         # Manual search filters
         # Gene filter
         if gene_symbol and gene_symbol.strip():
@@ -201,20 +205,12 @@ def build_query_and_params(use_csv=False):
             params.append(gene_symbol.strip())
 
         # Chromosome filter
-        if chromosome:
-            where_parts.append("vl.chromosome = %s")
-            params.append(chromosome)
+        where_parts.append("vl.chromosome = %s")
+        params.append(query_chromosome)
 
         # Position range filter
-        if start_pos is not None and end_pos is not None:
-            where_parts.append("vl.position BETWEEN %s AND %s")
-            params.extend([start_pos, end_pos])
-        elif start_pos is not None:
-            where_parts.append("vl.position >= %s")
-            params.append(start_pos)
-        elif end_pos is not None:
-            where_parts.append("vl.position <= %s")
-            params.append(end_pos)
+        where_parts.append("vl.position BETWEEN %s AND %s")
+        params.extend([query_start, query_end])
 
     # Frequency filters (optional - only applied if user changes defaults)
     # Uses HAVING since it filters on aggregated values
@@ -235,19 +231,21 @@ if search_button:
     # Determine search mode: CSV or manual
     use_csv_search = csv_conditions is not None and len(csv_conditions) > 0
 
-    # Validate input
+    if uploaded_file and not use_csv_search:
+        st.error("Please correct the uploaded CSV before searching.")
+        st.session_state.pop('search_results', None)
+        st.session_state.pop('search_summary', None)
+        st.stop()
+
+    # Validate before executing any variant query.
     if not use_csv_search:
-        if not (gene_symbol and gene_symbol.strip()) and not chromosome and start_pos is None and end_pos is None:
-            st.error("⚠️ Please provide at least one search parameter (gene symbol, chromosome, or position range) or upload a CSV file.")
+        try:
+            validate_query_window(chromosome, start_pos, end_pos, limit=MAX_QUERY_BASES)
+        except ValueError as error:
+            st.error(str(error))
+            st.session_state.pop('search_results', None)
+            st.session_state.pop('search_summary', None)
             st.stop()
-        elif chromosome and not (gene_symbol and gene_symbol.strip()) and start_pos is None and end_pos is None:
-            st.error("⚠️ Chromosome provided without position. Please provide also a position range or gene symbol.")
-            st.stop()
-        elif start_pos is not None and end_pos is not None and start_pos > end_pos:
-            st.error("⚠️ Start position must be less than or equal to end position.")
-            st.stop()
-        else:
-            use_csv_search = False  # Proceed with manual search
 
     if use_csv_search or (gene_symbol and gene_symbol.strip()) or chromosome or start_pos is not None or end_pos is not None:
         try:

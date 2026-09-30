@@ -8,6 +8,15 @@ from utils.csv_parser import validate_csv_columns, get_required_columns, validat
 
 st.set_page_config(page_title="Advanced Variant Search", layout="wide")
 
+# Hide only CSV download, preserving search, fullscreen, and row selection. Streamlit does not support this hiding
+st.html("""
+<style>
+[data-testid="stDataFrame"] button[aria-label="Download as CSV"] {
+    display: none !important;
+}
+</style>
+""")
+
 db = DatabaseClient()
 
 st.title("Advanced Variant Search")
@@ -287,9 +296,6 @@ if search_button:
                 # Store in session state so reruns (from row selection) can access them
                 st.session_state['search_results'] = results
                 st.session_state['search_summary'] = summary
-                st.session_state['search_filename'] = (
-                    f"variant_search_{gene_symbol}_{chromosome}" if gene_symbol else f"variant_search_{chromosome}"
-                ).replace(" ", "_").replace(",", "_") + ".csv"
 
         except Exception as e:
             st.error(f"❌ Search failed: {str(e)}")
@@ -360,12 +366,3 @@ if 'search_results' in st.session_state and 'search_summary' in st.session_state
                     )
                 }
             )
-
-    # Download button
-    csv = results.to_csv(index=False)
-    st.download_button(
-        label="Download CSV",
-        data=csv,
-        file_name=st.session_state.get('search_filename', 'variant_search.csv'),
-        mime="text/csv"
-    )

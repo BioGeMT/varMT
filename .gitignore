@@ -53,3 +53,7 @@ Thumbs.db
 
 #config files
 config/db_connection.yml
+
+# Agents
+AGENTS.md
+CLAUDE.md

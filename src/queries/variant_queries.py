@@ -18,8 +18,6 @@ def get_variants_in_range():
         vl.reference_allele,
         v.alternate_allele,
         v.rs_id,
-        SUM(vf.alternate_allele_count) as alternate_allele_count,
-        SUM(vf.allele_number) as allele_number,
         -- Calculate aggregated allele frequencies across all collections
         ROUND(
             (SUM(vf.allele_number) - SUM(vf.alternate_allele_count))::numeric / SUM(vf.allele_number), 4
@@ -59,8 +57,6 @@ def get_variants_by_gene():
         vl.reference_allele,
         v.alternate_allele,
         v.rs_id,
-        SUM(vf.alternate_allele_count) as alternate_allele_count,
-        SUM(vf.allele_number) as allele_number,
         ROUND(SUM(vf.alternate_allele_count)::numeric / SUM(vf.allele_number), 4) as allele_frequency,
         -- VEP annotation fields
         vva.transcript_id,
@@ -96,8 +92,6 @@ def get_variants_advanced_search():
         vl.reference_allele,
         v.alternate_allele,
         v.rs_id,
-        SUM(vf.alternate_allele_count) as alternate_allele_count,
-        SUM(vf.allele_number) as allele_number,
         -- Calculate aggregated allele frequencies across all collections
         ROUND(
             (SUM(vf.allele_number) - SUM(vf.alternate_allele_count))::numeric / SUM(vf.allele_number), 4

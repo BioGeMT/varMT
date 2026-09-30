@@ -287,7 +287,6 @@ if search_button:
                 summary = summary.rename(columns={
                     'gene': 'Gene', 'chromosome': 'Chr', 'position': 'Position',
                     'reference_allele': 'Ref', 'alternate_allele': 'Alt', 'rs_id': 'RS ID',
-                    'alternate_allele_count': 'Alt Count', 'allele_number': 'Total Alleles',
                     'ref_allele_freq': 'Ref Freq (MT)', 'alt_allele_freq': 'Alt Freq (MT)', 'gnomad_url': 'gnomAD',
                 })
                 for col in ['Ref Freq (MT)', 'Alt Freq (MT)']:

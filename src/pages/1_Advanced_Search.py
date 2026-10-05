@@ -21,10 +21,12 @@ st.html("""
 
 db = DatabaseClient()
 query_limit_label = f"{MAX_QUERY_BASES / 1000:g} kb"
+min_maf_label = f"{MIN_MAF * 100:g}%"
 
 st.title("Advanced Variant Search")
 st.write("Search variants by gene symbol, chromosome, and/or position range with detailed frequency analysis.")
 st.info("ℹ️ Reference genome: **GRCh38**")
+st.info(f"This browser shows common variants only (MAF ≥ {min_maf_label}). Variants below this threshold are not displayed and may still be present in DwarnaBio.")
 
 @st.cache_data
 def load_genes_suggestions() -> list[str]:
@@ -252,7 +254,7 @@ if search_button:
                 results = db.execute_query_with_params(query, params) if params else db.execute_query(query)
 
             if len(results) == 0:
-                st.warning("No variants found matching your search criteria.")
+                st.warning(f"No common variants (MAF ≥ {min_maf_label}) to display for this search. Rarer variants are not shown and may still be present in DwarnaBio.")
                 st.session_state.pop('search_results', None)
                 st.session_state.pop('search_summary', None)
             else:

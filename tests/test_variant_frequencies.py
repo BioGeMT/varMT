@@ -15,7 +15,9 @@ from utils.db_utils import (
     insert_variant_frequency,
 )
 
-from queries.variant_queries import get_variants_in_range
+from queries.variant_queries import get_variants_advanced_search
+
+MIN_MAF = 0.05  # Fixed test policy, independent of deployment configuration.
 
 
 @pytest.fixture()
@@ -48,8 +50,8 @@ def _insert_variant_with_frequency(cur, chrom, pos, ref, alt, genome, sample_cou
 
 def _query_variant_frequency(cur, chrom):
     """Run the aggregation query and return results as list of dicts."""
-    query = get_variants_in_range()
-    cur.execute(query, (chrom,))
+    query = get_variants_advanced_search().format(where_clause="WHERE vl.chromosome = %s", freq_filter="")
+    cur.execute(query, (chrom, MIN_MAF, MIN_MAF))
     columns = [desc[0] for desc in cur.description]
     return [dict(zip(columns, row)) for row in cur.fetchall()]
 

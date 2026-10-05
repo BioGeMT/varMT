@@ -58,3 +58,12 @@ def setup_test_database(test_db_config):
     cur.execute(f"DROP DATABASE IF EXISTS {dbname}")
     cur.close()
     conn.close()
+
+
+@pytest.fixture()
+def db_conn(setup_test_database):
+    """Provide a database connection that rolls back after each test."""
+    conn = psycopg2.connect(**setup_test_database)
+    yield conn
+    conn.rollback()
+    conn.close()

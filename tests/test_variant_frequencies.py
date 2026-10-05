@@ -20,15 +20,6 @@ from queries.variant_queries import get_variants_advanced_search
 MIN_MAF = 0.05  # Fixed test policy, independent of deployment configuration.
 
 
-@pytest.fixture()
-def db_conn(setup_test_database):
-    """Provide a database connection that rolls back after each test."""
-    conn = psycopg2.connect(**setup_test_database)
-    yield conn
-    conn.rollback()
-    conn.close()
-
-
 def _insert_variant_with_frequency(cur, chrom, pos, ref, alt, genome, sample_count, ac, an,
                                     hom_ref=0, hom_alt=0, het=0, missing=0):
     """Helper to insert a variant location, variant, collection, and frequency row."""

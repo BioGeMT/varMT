@@ -1,2 +1,3 @@
 query:
   max_interval_bases: 5000
+  min_maf: 0.05

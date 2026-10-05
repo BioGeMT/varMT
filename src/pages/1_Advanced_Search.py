@@ -5,7 +5,7 @@ import pandas as pd
 from utils.streamlit_db import DatabaseClient
 from queries.variant_queries import get_variants_advanced_search
 from utils.csv_parser import validate_csv_columns, get_required_columns, validate_csv_data, build_query_conditions
-from utils.browser_policy import MAX_QUERY_BASES
+from utils.browser_policy import MAX_QUERY_BASES, MIN_MAF
 from utils.query_limits import validate_query_window
 
 st.set_page_config(page_title="Advanced Variant Search", layout="wide")
@@ -188,7 +188,6 @@ def build_query_and_params(use_csv=False):
     base_query = get_variants_advanced_search()
 
     where_parts = []
-    having_parts = []
     params = []
 
     # Use CSV conditions if available
@@ -212,18 +211,17 @@ def build_query_and_params(use_csv=False):
         where_parts.append("vl.position BETWEEN %s AND %s")
         params.extend([query_start, query_end])
 
+    # Mandatory release rule: placeholders follow the WHERE clause in the template
+    params.extend([MIN_MAF, MIN_MAF])
+
     # Frequency filters (optional - only applied if user changes defaults)
-    # Uses HAVING since it filters on aggregated values
+    freq_filter = ""
     if min_alt_freq > 0.0 or max_alt_freq < 1.0:
-        having_parts.append("(SUM(vf.alternate_allele_count)::numeric / SUM(vf.allele_number)) BETWEEN %s AND %s")
+        freq_filter = "AND b.af_max BETWEEN %s AND %s"
         params.extend([min_alt_freq, max_alt_freq])
 
-    # Build WHERE and HAVING clauses
     where_clause = "WHERE " + " AND ".join(where_parts) if where_parts else ""
-    having_clause = "HAVING " + " AND ".join(having_parts) if having_parts else ""
-
-    # Format the query with WHERE and HAVING clauses
-    final_query = base_query.format(where_clause=where_clause, having_clause=having_clause)
+    final_query = base_query.format(where_clause=where_clause, freq_filter=freq_filter)
 
     return final_query, tuple(params)
 

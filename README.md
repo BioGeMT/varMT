@@ -16,29 +16,29 @@ VarMTdb processes VCF files and stores genetic variants in a relational database
 - **Web Interface**: Streamlit app for querying variants by chromosome, gene, and allele frequency
 - **Single-Container Deployment**: Docker image bundling PostgreSQL and the Streamlit UI
 
-## Quick Start (Docker)
+## Quick Start (Docker Compose)
 
-The recommended way to run VarMT. Everything (PostgreSQL, the Streamlit UI, and the CLI) lives in one container.
+The recommended way to run VarMT. Docker Compose runs two containers: `db` (PostgreSQL) and `app` (the Streamlit UI and the CLI).
 
-### 1. Build the image
-
-```bash
-docker build -t varmt .
-```
-
-### 2. Start the container
+### 1. Configure
 
 ```bash
-docker run -d \
-    --name varmt-app \
-    -v varmt-pgdata:/data/postgresql \
-    -p 8502:8501 \
-    varmt
+cp .env.example .env
 ```
 
-- `-v varmt-pgdata:/data/postgresql` — named volume so the database survives container restarts
-- `-p 8502:8501` — exposes the Streamlit UI on host port 8502 (change if needed)
-- On first start, the container initializes PostgreSQL and creates the `varmt` database and tables
+Set `POSTGRES_PASSWORD` in `.env` (not tracked by Git). `VARMT_PORT` is the host port for the UI (default 8502).
+
+### 2. Build and start
+
+```bash
+docker compose up -d --build
+```
+
+- The database is stored in the `varmt-db` named volume, so it survives container restarts and rebuilds
+- On first start, PostgreSQL creates the `varmt` database; the app creates the tables on every start if they are missing
+- The database is only reachable from the `app` container, not from the host
+
+Stop with `docker compose down` (add `-v` only if you want to delete the database volume).
 
 ### 3. Ingest a VCF file
 
@@ -78,12 +78,12 @@ query:
   max_interval_bases: 5000
 ```
 
-Restart Streamlit after changing it. For Docker, rebuild the image and
-replace the container, retaining the database volume.
+Restart Streamlit after changing it. For Docker, run `docker compose up -d --build`;
+the database volume is kept.
 
 ### Adding more collections
 
-Just run `./docker/ingest.sh /path/to/another.vcf` again — collections accumulate over time. No need to restart the container or recreate indexes.
+Just run `./docker/ingest.sh /path/to/another.vcf` again — collections accumulate over time. No need to restart the containers or recreate indexes.
 
 ## Manual Installation
 
@@ -161,13 +161,14 @@ These arguments apply to both the Docker workflow (when calling `vcf2db.py` via 
 
 ```
 varMT/
-├── Dockerfile                   # Container definition
-├── supervisord.conf             # Manages PostgreSQL + Streamlit inside the container
+├── docker-compose.yml           # db (PostgreSQL) + app (Streamlit) services
+├── .env.example                 # Template for .env (database password, UI port)
+├── Dockerfile                   # App container definition
 ├── environment.txt              # Pip dependencies (used by Docker build)
 ├── environment.yml              # Conda environment spec (manual install)
 ├── docker/
-│   ├── init-db.sh               # First-run: initdb + create varmt DB and tables
-│   ├── db_connection.yml        # In-container Streamlit DB config (localhost)
+│   ├── start.sh                 # App startup: create missing tables, run Streamlit
+│   ├── db_connection.yml        # In-container Streamlit DB config (host: db)
 │   ├── ingest.sh                # Wrapper: docker cp VCF + run vcf2db.py
 │   └── indexing.sh              # Wrapper: run vcf2db.py -x for indexing
 ├── src/
@@ -198,9 +199,8 @@ varMT/
 
 ## Troubleshooting
 
-- **Port already in use** when starting the container: another service is bound to the host port. Use a different port (e.g. `-p 8503:8501`).
-- **`initdb: directory exists but is not empty`**: a previous container left partial data in the volume. Remove it with `docker volume rm varmt-pgdata` and start fresh.
-- **Streamlit shows "connection failed"**: ensure the container is running (`docker ps`) and that you're hitting the host port mapped to 8501.
+- **Port already in use** when starting the containers: another service is bound to the host port. Set a different `VARMT_PORT` in `.env` (e.g. `8503`).
+- **Streamlit shows "connection failed"**: ensure both containers are running (`docker compose ps`) and that `POSTGRES_PASSWORD` in `.env` has not changed since the database volume was created (PostgreSQL only reads it on first initialization).
 
 ## Sample Data
 

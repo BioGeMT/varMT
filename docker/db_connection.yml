@@ -1,6 +1,6 @@
 database:
   username: postgres
   password:
-  host: localhost
+  host: db
   port: 5432
   database: varmt

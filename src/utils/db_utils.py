@@ -54,7 +54,7 @@ def create_tables(dbname: str, user: str, password: str, host: str) -> None:
     cur = conn.cursor()
 
     cur.execute("""
-                CREATE TABLE variant_locations(
+                CREATE TABLE IF NOT EXISTS variant_locations(
                     id SERIAL PRIMARY KEY,
                     chromosome TEXT NOT NULL,
                     position INTEGER NOT NULL,
@@ -65,7 +65,7 @@ def create_tables(dbname: str, user: str, password: str, host: str) -> None:
                 """)
 
     cur.execute("""
-            CREATE TABLE variants(
+            CREATE TABLE IF NOT EXISTS variants(
                 id SERIAL PRIMARY KEY,
                 variant_location_id INTEGER NOT NULL,
                 rs_id TEXT,
@@ -76,14 +76,14 @@ def create_tables(dbname: str, user: str, password: str, host: str) -> None:
             """)
     
     cur.execute("""
-            CREATE TABLE collections(
+            CREATE TABLE IF NOT EXISTS collections(
                 id SERIAL PRIMARY KEY,
                 sample_count INTEGER NOT NULL
             );
             """)
     
     cur.execute("""
-            CREATE TABLE variant_frequencies(
+            CREATE TABLE IF NOT EXISTS variant_frequencies(
                 id SERIAL PRIMARY KEY,
                 variant_id INTEGER NOT NULL,
                 collection_id INTEGER NOT NULL,
@@ -100,7 +100,7 @@ def create_tables(dbname: str, user: str, password: str, host: str) -> None:
             """)
     
     cur.execute("""
-            CREATE TABLE genes(
+            CREATE TABLE IF NOT EXISTS genes(
                 id SERIAL PRIMARY KEY,
                 symbol TEXT NOT NULL,
                 UNIQUE (symbol)
@@ -108,7 +108,7 @@ def create_tables(dbname: str, user: str, password: str, host: str) -> None:
             """)
     
     cur.execute("""
-            CREATE TABLE gene_locations(
+            CREATE TABLE IF NOT EXISTS gene_locations(
                 id SERIAL PRIMARY KEY,
                 gene_id INTEGER NOT NULL,
                 variant_location_id INTEGER NOT NULL,
@@ -119,7 +119,7 @@ def create_tables(dbname: str, user: str, password: str, host: str) -> None:
             """)
 
     cur.execute("""
-            CREATE TABLE variant_vep_annotations(
+            CREATE TABLE IF NOT EXISTS variant_vep_annotations(
                 id SERIAL PRIMARY KEY,
                 variant_id INTEGER NOT NULL,
                 transcript_id TEXT,

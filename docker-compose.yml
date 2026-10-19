@@ -25,5 +25,38 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    command: start-dev # TODO switch to "start" for production
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set KEYCLOAK_DB_PASSWORD in .env}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?Set KEYCLOAK_ADMIN_USERNAME in .env}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${KEYCLOAK_PORT:-8180}:8080"
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  keycloak-db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set KEYCLOAK_DB_PASSWORD in .env}
+    volumes:
+      - keycloak-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
 volumes:
   varmt-db:
+  keycloak-db:

@@ -18,7 +18,7 @@ VarMTdb processes VCF files and stores genetic variants in a relational database
 
 ## Quick Start (Docker Compose)
 
-The recommended way to run VarMT. Docker Compose runs two containers: `db` (PostgreSQL) and `app` (the Streamlit UI and the CLI).
+The recommended way to run VarMT. Docker Compose runs four containers: `db` (PostgreSQL), `app` (the Streamlit UI and the CLI), `keycloak` (user accounts and login) and `keycloak-db` (Keycloak's own PostgreSQL).
 
 ### 1. Configure
 
@@ -26,7 +26,17 @@ The recommended way to run VarMT. Docker Compose runs two containers: `db` (Post
 cp .env.example .env
 ```
 
-Set `POSTGRES_PASSWORD` in `.env` (not tracked by Git). `VARMT_PORT` is the host port for the UI (default 8502).
+Set the values in `.env` (not tracked by Git):
+
+| Variable | Purpose |
+|---|---|
+| `POSTGRES_PASSWORD` | Password of the VarMT database |
+| `VARMT_PORT` | Host port for the UI (default 8502) |
+| `KEYCLOAK_DB_PASSWORD` | Password of Keycloak's database |
+| `KEYCLOAK_ADMIN_USERNAME` / `KEYCLOAK_ADMIN_PASSWORD` | First Keycloak administrator |
+| `KEYCLOAK_PORT` | Host port for Keycloak (default 8180) |
+
+Passwords and the Keycloak administrator are only applied when the database volumes are first created; changing them in `.env` later has no effect. Change the administrator password in the Keycloak admin console instead.
 
 ### 2. Build and start
 
@@ -37,8 +47,9 @@ docker compose up -d --build
 - The database is stored in the `varmt-db` named volume, so it survives container restarts and rebuilds
 - On first start, PostgreSQL creates the `varmt` database; the app creates the tables on every start if they are missing
 - The database is only reachable from the `app` container, not from the host
+- Keycloak runs in development mode (plain HTTP) and stores its data in the `keycloak-db` volume. Its admin console is at [http://localhost:8180](http://localhost:8180), reachable from this machine only
 
-Stop with `docker compose down` (add `-v` only if you want to delete the database volume).
+Stop with `docker compose down` (add `-v` only if you want to delete the database volumes, including all Keycloak accounts).
 
 ### 3. Ingest a VCF file
 
@@ -173,8 +184,8 @@ docker stop varmt-test-db
 
 ```
 varMT/
-├── docker-compose.yml           # db (PostgreSQL) + app (Streamlit) services
-├── .env.example                 # Template for .env (database password, UI port)
+├── docker-compose.yml           # db, app, keycloak and keycloak-db services
+├── .env.example                 # Template for .env (passwords, Keycloak admin, ports)
 ├── Dockerfile                   # App container definition
 ├── environment.txt              # Pip dependencies (used by Docker build)
 ├── environment.yml              # Conda environment spec (manual install)

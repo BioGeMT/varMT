@@ -56,7 +56,7 @@ docker compose up -d --build
 
 Stop with `docker compose down` (add `-v` only if you want to delete the database volumes, including all Keycloak accounts).
 
-Run `docker compose up -d --build` again after changing `src/`, `docker/start.sh`, `environment.txt` or the `Dockerfile`; changes to `.env` or `docker-compose.yml` only need `docker compose up -d`.
+Run `docker compose up -d --build` again after changing `src/`, `docker/start.sh`, `docker/helpers.sh`, `environment.txt` or the `Dockerfile`; changes to `.env` or `docker-compose.yml` only need `docker compose up -d`.
 
 ### 3. Ingest a VCF file
 
@@ -122,7 +122,7 @@ The file is imported only if the realm does not exist yet. Later edits to the fi
 
 The sidebar of every page shows **Log in**, or the signed-in email and **Log out**. Logging in sends the browser to Keycloak's login page (where new users can register) and back to VarMT's `/oauth2callback`. Logging out ends both the VarMT and the Keycloak session, so the next login asks for the password again. The home page is public; Advanced Search requires login (`require_login()` in `src/utils/auth.py`). To block a user, disable them in the Keycloak admin console (Users → user → Enabled).
 
-- Streamlit reads its login settings from `.streamlit/secrets.toml`. In Docker, `docker/start.sh` writes this file inside the container from `.env` on every start
+- Streamlit reads its login settings from `.streamlit/secrets.toml`. In Docker, `docker/start.sh` writes this file (via `write_streamlit_secrets` in `docker/helpers.sh`) inside the container from `.env` on every start
 - Browsers reach Keycloak at `KEYCLOAK_URL`, while the app container reaches it at `http://keycloak:8080`. `KC_HOSTNAME` and `KC_HOSTNAME_BACKCHANNEL_DYNAMIC` in `docker-compose.yml` make Keycloak advertise the public address to browsers and accept the internal one from the app
 
 ## Manual Installation
@@ -235,6 +235,7 @@ varMT/
 ├── environment.txt              # Python dependencies (Docker build and manual install)
 ├── docker/
 │   ├── start.sh                 # App startup: write login settings, create missing tables, run Streamlit
+│   ├── helpers.sh               # Shell functions used by start.sh (writes secrets.toml)
 │   ├── db_connection.yml        # In-container Streamlit DB config (host: db)
 │   ├── ingest.sh                # Wrapper: docker cp VCF + run vcf2db.py
 │   ├── indexing.sh              # Wrapper: run vcf2db.py -x for indexing

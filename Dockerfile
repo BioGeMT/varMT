@@ -6,7 +6,7 @@ COPY environment.txt .
 RUN python3 -m pip install -r environment.txt
 
 COPY src/ src/
-COPY docker/start.sh /app/start.sh
+COPY docker/start.sh docker/helpers.sh /app/
 COPY docker/db_connection.yml config/db_connection.yml
 COPY config/browser_policy.yml config/browser_policy.yml
 

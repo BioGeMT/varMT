@@ -131,9 +131,12 @@ Use this only if you don't want to run Docker. Requires a PostgreSQL server you 
 
 ### Environment Setup
 
+Requires Python 3.12, for example with conda:
+
 ```bash
-conda env create -f environment.yml
+conda create -n varMTenv python=3.12
 conda activate varMTenv
+pip install -r environment.txt
 ```
 
 ### Database Authentication
@@ -212,7 +215,7 @@ These arguments apply to both the Docker workflow (when calling `vcf2db.py` via 
 
 ## Running Tests
 
-The tests need a PostgreSQL server where they can create and drop a test database. Use a throwaway container (separate from the Compose `db`), with the conda environment active:
+The tests need a PostgreSQL server where they can create and drop a test database. Use a throwaway container (separate from the Compose `db`), with the environment above active:
 
 ```bash
 docker run --rm -d --name varmt-test-db -p 127.0.0.1:5433:5432 -e POSTGRES_PASSWORD=test postgres:17
@@ -229,8 +232,7 @@ varMT/
 ├── docker-compose.yml           # db, app, keycloak and keycloak-db services
 ├── .env.example                 # Template for .env (passwords, Keycloak admin, ports)
 ├── Dockerfile                   # App container definition
-├── environment.txt              # Pip dependencies (used by Docker build)
-├── environment.yml              # Conda environment spec (manual install)
+├── environment.txt              # Python dependencies (Docker build and manual install)
 ├── docker/
 │   ├── start.sh                 # App startup: write login settings, create missing tables, run Streamlit
 │   ├── db_connection.yml        # In-container Streamlit DB config (host: db)

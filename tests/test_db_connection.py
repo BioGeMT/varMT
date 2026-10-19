@@ -12,7 +12,7 @@ from utils.db_utils import create_database
 def test_can_connect_to_postgres(test_db_config):
     """Test that we can connect to PostgreSQL server."""
     user = test_db_config['user']
-    password = test_db_config['password']
+    password = test_db_config.get('password')
     host = test_db_config['host']
 
     conn = psycopg2.connect(dbname='postgres', user=user, password=password, host=host)
@@ -24,7 +24,7 @@ def test_can_create_test_database(test_db_config):
     """Test that we can create the test database."""
     dbname = test_db_config['dbname']
     user = test_db_config['user']
-    password = test_db_config['password']
+    password = test_db_config.get('password')
     host = test_db_config['host']
 
     create_database(dbname=dbname, user=user, password=password, host=host)

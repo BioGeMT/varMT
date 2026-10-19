@@ -157,6 +157,18 @@ These arguments apply to both the Docker workflow (when calling `vcf2db.py` via 
    python3 src/vcf2db.py -d myvariantdb -u postgres -l localhost -x
    ```
 
+## Running Tests
+
+The tests need a PostgreSQL server where they can create and drop a test database. Use a throwaway container (separate from the Compose `db`), with the conda environment active:
+
+```bash
+docker run --rm -d --name varmt-test-db -p 127.0.0.1:5433:5432 -e POSTGRES_PASSWORD=test postgres:17
+TEST_DB_PASSWORD=test PGPORT=5433 python -m pytest tests/
+docker stop varmt-test-db
+```
+
+`TEST_DB_NAME`, `TEST_DB_USER` and `TEST_DB_HOST` default to `varmt_test`, `postgres` and `localhost`.
+
 ## Project Structure
 
 ```

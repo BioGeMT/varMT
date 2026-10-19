@@ -1,0 +1,37 @@
+{
+  "realm": "varmt",
+  "displayName": "VarMT",
+  "enabled": true,
+  "sslRequired": "external",
+
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "verifyEmail": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+
+  "passwordPolicy": "length(12) and notUsername and notEmail",
+
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "permanentLockout": false,
+
+  "clients": [
+    {
+      "clientId": "varmt",
+      "name": "VarMT browser",
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "${VARMT_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["${VARMT_URL}/oauth2callback"]
+    }
+  ]
+}

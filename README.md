@@ -35,8 +35,10 @@ Set the values in `.env` (not tracked by Git):
 | `KEYCLOAK_DB_PASSWORD` | Password of Keycloak's database |
 | `KEYCLOAK_ADMIN_USERNAME` / `KEYCLOAK_ADMIN_PASSWORD` | First Keycloak administrator |
 | `KEYCLOAK_PORT` | Host port for Keycloak (default 8180) |
+| `VARMT_CLIENT_SECRET` | Shared secret between VarMT and Keycloak (generate with `openssl rand -hex 32`) |
+| `VARMT_URL` | Address users open VarMT at (default `http://localhost:8502`); Keycloak only redirects back here after login |
 
-Passwords and the Keycloak administrator are only applied when the database volumes are first created; changing them in `.env` later has no effect. Change the administrator password in the Keycloak admin console instead.
+Passwords, the Keycloak administrator and the client settings are only applied when the volumes and the realm are first created; changing them in `.env` later has no effect. Change them in the Keycloak admin console instead.
 
 ### 2. Build and start
 
@@ -48,6 +50,7 @@ docker compose up -d --build
 - On first start, PostgreSQL creates the `varmt` database; the app creates the tables on every start if they are missing
 - The database is only reachable from the `app` container, not from the host
 - Keycloak runs in development mode (plain HTTP) and stores its data in the `keycloak-db` volume. Its admin console is at [http://localhost:8180](http://localhost:8180), reachable from this machine only
+- On first start, Keycloak creates the `varmt` realm (VarMT's users and login settings) from `docker/keycloak/varmt-realm.json`. See [Keycloak realm](#keycloak-realm)
 
 Stop with `docker compose down` (add `-v` only if you want to delete the database volumes, including all Keycloak accounts).
 
@@ -95,6 +98,19 @@ the database volume is kept.
 ### Adding more collections
 
 Just run `./docker/ingest.sh /path/to/another.vcf` again — collections accumulate over time. No need to restart the containers or recreate indexes.
+
+### Keycloak realm
+
+`docker/keycloak/varmt-realm.json` defines the `varmt` realm, which holds VarMT's users separately from Keycloak's built-in `master` realm (used only for Keycloak administration):
+
+- Self-registration with the email as username; one account per email
+- Password policy: at least 12 characters, not equal to the username or email
+- Account lockout after 5 failed logins (from 1 up to 15 minutes, unlocks automatically)
+- The `varmt` client used by the Streamlit app: browser login only, redirects only to `VARMT_URL`, secret from `VARMT_CLIENT_SECRET`
+
+Email verification and password reset are off because no mail server is configured yet; enable them in production.
+
+The file is imported only if the realm does not exist yet. Later edits to the file do not change an existing realm: apply them in the admin console, or delete the realm and restart Keycloak (this also deletes its users).
 
 ## Manual Installation
 
@@ -193,7 +209,9 @@ varMT/
 │   ├── start.sh                 # App startup: create missing tables, run Streamlit
 │   ├── db_connection.yml        # In-container Streamlit DB config (host: db)
 │   ├── ingest.sh                # Wrapper: docker cp VCF + run vcf2db.py
-│   └── indexing.sh              # Wrapper: run vcf2db.py -x for indexing
+│   ├── indexing.sh              # Wrapper: run vcf2db.py -x for indexing
+│   └── keycloak/
+│       └── varmt-realm.json     # Keycloak realm imported on first start
 ├── src/
 │   ├── vcf2db.py                # Main CLI application
 │   ├── vcf2db_cli.py            # Command line interface

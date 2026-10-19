@@ -53,6 +53,7 @@ Thumbs.db
 
 #config files
 config/db_connection.yml
+.streamlit/secrets.toml
 
 # Agents
 AGENTS.md

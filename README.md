@@ -35,10 +35,12 @@ Set the values in `.env` (not tracked by Git):
 | `KEYCLOAK_DB_PASSWORD` | Password of Keycloak's database |
 | `KEYCLOAK_ADMIN_USERNAME` / `KEYCLOAK_ADMIN_PASSWORD` | First Keycloak administrator |
 | `KEYCLOAK_PORT` | Host port for Keycloak (default 8180) |
+| `KEYCLOAK_URL` | Address browsers open Keycloak at (default `http://localhost:8180`); keep it in line with `KEYCLOAK_PORT` |
 | `VARMT_CLIENT_SECRET` | Shared secret between VarMT and Keycloak (generate with `openssl rand -hex 32`) |
 | `VARMT_URL` | Address users open VarMT at (default `http://localhost:8502`); Keycloak only redirects back here after login |
+| `VARMT_COOKIE_SECRET` | Signs the VarMT login cookie (generate with `openssl rand -hex 32`) |
 
-Passwords, the Keycloak administrator and the client settings are only applied when the volumes and the realm are first created; changing them in `.env` later has no effect. Change them in the Keycloak admin console instead.
+Passwords, the Keycloak administrator and the client settings are only applied when the volumes and the realm are first created; changing them in `.env` later has no effect. Change them in the Keycloak admin console instead. `VARMT_CLIENT_SECRET` and `VARMT_URL` are also read by the app on every start, so if you change them in `.env`, change them in the console as well (*varmt realm → Clients → varmt*: *Credentials* tab for the secret, *Valid redirect URIs* for the URL).
 
 ### 2. Build and start
 
@@ -53,6 +55,8 @@ docker compose up -d --build
 - On first start, Keycloak creates the `varmt` realm (VarMT's users and login settings) from `docker/keycloak/varmt-realm.json`. See [Keycloak realm](#keycloak-realm)
 
 Stop with `docker compose down` (add `-v` only if you want to delete the database volumes, including all Keycloak accounts).
+
+Run `docker compose up -d --build` again after changing `src/`, `docker/start.sh`, `environment.txt` or the `Dockerfile`; changes to `.env` or `docker-compose.yml` only need `docker compose up -d`.
 
 ### 3. Ingest a VCF file
 
@@ -78,7 +82,9 @@ Browse to [http://localhost:8502](http://localhost:8502) to query the variants. 
 ssh -L 1455:localhost:8502 user@server
 ```
 
-Then open [http://localhost:1455](http://localhost:1455) on your local machine.
+Then open [http://localhost:1455](http://localhost:1455) on your local machine. For login to work through a tunnel, `VARMT_URL` must be the tunnelled address (`http://localhost:1455`), and Keycloak needs its own tunnel matching `KEYCLOAK_URL` (e.g. `-L 8180:localhost:8180`).
+
+Use **Log in** in the sidebar to sign in or register; see [Login](#login).
 
 Every variant search requires a chromosome and an inclusive start/end interval
 of at most 5,000 bases (`end - start + 1`). Gene symbols and CSV rsIDs only narrow
@@ -111,6 +117,13 @@ Just run `./docker/ingest.sh /path/to/another.vcf` again — collections accumul
 Email verification and password reset are off because no mail server is configured yet; enable them in production.
 
 The file is imported only if the realm does not exist yet. Later edits to the file do not change an existing realm: apply them in the admin console, or delete the realm and restart Keycloak (this also deletes its users).
+
+### Login
+
+The sidebar of every page shows **Log in**, or the signed-in email and **Log out**. Logging in sends the browser to Keycloak's login page (where new users can register) and back to VarMT's `/oauth2callback`. Logging out ends both the VarMT and the Keycloak session, so the next login asks for the password again. Pages are not restricted to logged-in users yet.
+
+- Streamlit reads its login settings from `.streamlit/secrets.toml`. In Docker, `docker/start.sh` writes this file inside the container from `.env` on every start
+- Browsers reach Keycloak at `KEYCLOAK_URL`, while the app container reaches it at `http://keycloak:8080`. `KC_HOSTNAME` and `KC_HOSTNAME_BACKCHANNEL_DYNAMIC` in `docker-compose.yml` make Keycloak advertise the public address to browsers and accept the internal one from the app
 
 ## Manual Installation
 
@@ -146,6 +159,19 @@ Requires `config/db_connection.yml` with database connection parameters. Support
 ```bash
 streamlit run src/streamlit_app.py
 ```
+
+For login, also create `.streamlit/secrets.toml` (not tracked by Git) pointing to a running Keycloak with the `varmt` realm:
+
+```toml
+[auth]
+redirect_uri = "http://localhost:8501/oauth2callback"
+cookie_secret = "<random string>"
+client_id = "varmt"
+client_secret = "<secret of the varmt client>"
+server_metadata_url = "http://localhost:8180/realms/varmt/.well-known/openid-configuration"
+```
+
+The `redirect_uri` must be one of the `varmt` client's valid redirect URIs in Keycloak.
 
 ## CLI Reference
 
@@ -206,7 +232,7 @@ varMT/
 ├── environment.txt              # Pip dependencies (used by Docker build)
 ├── environment.yml              # Conda environment spec (manual install)
 ├── docker/
-│   ├── start.sh                 # App startup: create missing tables, run Streamlit
+│   ├── start.sh                 # App startup: write login settings, create missing tables, run Streamlit
 │   ├── db_connection.yml        # In-container Streamlit DB config (host: db)
 │   ├── ingest.sh                # Wrapper: docker cp VCF + run vcf2db.py
 │   ├── indexing.sh              # Wrapper: run vcf2db.py -x for indexing
@@ -221,6 +247,7 @@ varMT/
 │   ├── queries/
 │   │   └── variant_queries.py   # Centralized SQL queries
 │   └── utils/
+│       ├── auth.py              # Login/logout sidebar
 │       ├── db_utils.py          # Database utility functions
 │       ├── streamlit_db.py      # DatabaseClient for Streamlit queries
 │       ├── vep_utils.py         # VEP annotation parsing utilities

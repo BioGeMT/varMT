@@ -18,6 +18,9 @@ services:
     container_name: varmt-app
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      VARMT_URL: ${VARMT_URL:-http://localhost:8502}
+      VARMT_CLIENT_SECRET: ${VARMT_CLIENT_SECRET:?Set VARMT_CLIENT_SECRET in .env}
+      VARMT_COOKIE_SECRET: ${VARMT_COOKIE_SECRET:?Set VARMT_COOKIE_SECRET in .env}
     ports:
       - "${VARMT_PORT:-8502}:8501"
     depends_on:
@@ -31,6 +34,9 @@ services:
     environment:
       VARMT_URL: ${VARMT_URL:-http://localhost:8502}
       VARMT_CLIENT_SECRET: ${VARMT_CLIENT_SECRET:?Set VARMT_CLIENT_SECRET in .env}
+      # Browsers use the public address; the app container reaches Keycloak at keycloak:8080
+      KC_HOSTNAME: ${KEYCLOAK_URL:-http://localhost:8180}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
       KC_DB_USERNAME: keycloak

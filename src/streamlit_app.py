@@ -2,8 +2,10 @@ import streamlit as st
 st.set_page_config(layout="wide")
 
 from utils.streamlit_db import DatabaseClient
+from utils.auth import auth_sidebar
 
 db = DatabaseClient()
+auth_sidebar()
 
 st.title("VarMT Database")
 

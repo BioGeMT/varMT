@@ -7,6 +7,7 @@ from queries.variant_queries import get_variants_advanced_search
 from utils.csv_parser import validate_csv_columns, get_required_columns, validate_csv_data, build_query_conditions
 from utils.browser_policy import MAX_QUERY_BASES, MIN_MAF
 from utils.query_limits import validate_query_window
+from utils.auth import auth_sidebar
 
 st.set_page_config(page_title="Advanced Variant Search", layout="wide")
 
@@ -20,6 +21,7 @@ st.html("""
 """)
 
 db = DatabaseClient()
+auth_sidebar()
 query_limit_label = f"{MAX_QUERY_BASES / 1000:g} kb"
 min_maf_label = f"{MIN_MAF * 100:g}%"
 

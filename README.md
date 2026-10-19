@@ -120,7 +120,7 @@ The file is imported only if the realm does not exist yet. Later edits to the fi
 
 ### Login
 
-The sidebar of every page shows **Log in**, or the signed-in email and **Log out**. Logging in sends the browser to Keycloak's login page (where new users can register) and back to VarMT's `/oauth2callback`. Logging out ends both the VarMT and the Keycloak session, so the next login asks for the password again. Pages are not restricted to logged-in users yet.
+The sidebar of every page shows **Log in**, or the signed-in email and **Log out**. Logging in sends the browser to Keycloak's login page (where new users can register) and back to VarMT's `/oauth2callback`. Logging out ends both the VarMT and the Keycloak session, so the next login asks for the password again. The home page is public; Advanced Search requires login (`require_login()` in `src/utils/auth.py`). To block a user, disable them in the Keycloak admin console (Users → user → Enabled).
 
 - Streamlit reads its login settings from `.streamlit/secrets.toml`. In Docker, `docker/start.sh` writes this file inside the container from `.env` on every start
 - Browsers reach Keycloak at `KEYCLOAK_URL`, while the app container reaches it at `http://keycloak:8080`. `KC_HOSTNAME` and `KC_HOSTNAME_BACKCHANNEL_DYNAMIC` in `docker-compose.yml` make Keycloak advertise the public address to browsers and accept the internal one from the app
@@ -247,7 +247,7 @@ varMT/
 │   ├── queries/
 │   │   └── variant_queries.py   # Centralized SQL queries
 │   └── utils/
-│       ├── auth.py              # Login/logout sidebar
+│       ├── auth.py              # Login/logout sidebar and login requirement
 │       ├── db_utils.py          # Database utility functions
 │       ├── streamlit_db.py      # DatabaseClient for Streamlit queries
 │       ├── vep_utils.py         # VEP annotation parsing utilities

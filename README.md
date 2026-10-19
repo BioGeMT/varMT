@@ -39,8 +39,12 @@ Set the values in `.env` (not tracked by Git):
 | `VARMT_CLIENT_SECRET` | Shared secret between VarMT and Keycloak (generate with `openssl rand -hex 32`) |
 | `VARMT_URL` | Address users open VarMT at (default `http://localhost:8502`); Keycloak only redirects back here after login |
 | `VARMT_COOKIE_SECRET` | Signs the VarMT login cookie (generate with `openssl rand -hex 32`) |
+| `SMTP_HOST` / `SMTP_PORT` | Mail server Keycloak sends verification emails through (port default 587) |
+| `SMTP_FROM` | Sender address of those emails |
+| `SMTP_STARTTLS` / `SMTP_AUTH` | Use STARTTLS / log in to the mail server (both default `true`) |
+| `SMTP_USER` / `SMTP_PASSWORD` | Mail server login, if `SMTP_AUTH=true` |
 
-Passwords, the Keycloak administrator and the client settings are only applied when the volumes and the realm are first created; changing them in `.env` later has no effect. Change them in the Keycloak admin console instead. `VARMT_CLIENT_SECRET` and `VARMT_URL` are also read by the app on every start, so if you change them in `.env`, change them in the console as well (*varmt realm → Clients → varmt*: *Credentials* tab for the secret, *Valid redirect URIs* for the URL).
+Passwords, the Keycloak administrator, the client and the mail settings are only applied when the volumes and the realm are first created; changing them in `.env` later has no effect. Change them in the Keycloak admin console instead. `VARMT_CLIENT_SECRET` and `VARMT_URL` are also read by the app on every start, so if you change them in `.env`, change them in the console as well (*varmt realm → Clients → varmt*: *Credentials* tab for the secret, *Valid redirect URIs* for the URL).
 
 ### 2. Build and start
 
@@ -113,8 +117,18 @@ Just run `./docker/ingest.sh /path/to/another.vcf` again — collections accumul
 - Password policy: at least 12 characters, not equal to the username or email
 - Account lockout after 5 failed logins (from 1 up to 15 minutes, unlocks automatically)
 - The `varmt` client used by the Streamlit app: browser login only, redirects only to `VARMT_URL`, secret from `VARMT_CLIENT_SECRET`
+- Email verification: registration asks only for email and name; users then click a link sent to their email and set their password there. Emails go through the mail server set by the `SMTP_*` variables, and the link points to `KEYCLOAK_URL`, so it must be reachable from where users open the email
+- Password reset is off
 
-Email verification and password reset are off because no mail server is configured yet; enable them in production.
+#### Testing email locally
+
+Without a real mail server, run [Mailpit](https://mailpit.axllent.org/), which catches every email and shows it in a web inbox. Start it on the Compose network:
+
+```bash
+docker run -d --name mailpit --network varmt_default -p 127.0.0.1:8025:8025 axllent/mailpit
+```
+
+Set `SMTP_HOST=mailpit`, `SMTP_PORT=1025`, `SMTP_STARTTLS=false` and `SMTP_AUTH=false` in `.env`, and read the emails at [http://localhost:8025](http://localhost:8025). Remove it with `docker rm -f mailpit`.
 
 The file is imported only if the realm does not exist yet. Later edits to the file do not change an existing realm: apply them in the admin console, or delete the realm and restart Keycloak (this also deletes its users).
 

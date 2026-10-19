@@ -8,7 +8,7 @@
   "registrationEmailAsUsername": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
-  "verifyEmail": false,
+  "verifyEmail": true,
   "resetPasswordAllowed": false,
   "rememberMe": false,
 
@@ -19,6 +19,17 @@
   "waitIncrementSeconds": 60,
   "maxFailureWaitSeconds": 900,
   "permanentLockout": false,
+
+  "smtpServer": {
+    "host": "${SMTP_HOST}",
+    "port": "${SMTP_PORT}",
+    "from": "${SMTP_FROM}",
+    "fromDisplayName": "VarMT",
+    "starttls": "${SMTP_STARTTLS}",
+    "auth": "${SMTP_AUTH}",
+    "user": "${SMTP_USER}",
+    "password": "${SMTP_PASSWORD}"
+  },
 
   "clients": [
     {

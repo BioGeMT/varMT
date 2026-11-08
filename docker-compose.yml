@@ -13,19 +13,32 @@ services:
       retries: 10
     restart: unless-stopped
 
-  app:
+  admin:
     build: .
-    container_name: varmt-app
+    image: varmt
+    command: ["/app/db_init.sh"]
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      VARMT_READER_PASSWORD: ${VARMT_READER_PASSWORD:?Set VARMT_READER_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build: .
+    image: varmt
+    container_name: varmt-app
+    environment:
+      PGPASSWORD: ${VARMT_READER_PASSWORD:?Set VARMT_READER_PASSWORD in .env}
       VARMT_URL: ${VARMT_URL:-http://localhost:8502}
       VARMT_CLIENT_SECRET: ${VARMT_CLIENT_SECRET:?Set VARMT_CLIENT_SECRET in .env}
       VARMT_COOKIE_SECRET: ${VARMT_COOKIE_SECRET:?Set VARMT_COOKIE_SECRET in .env}
     ports:
       - "${VARMT_PORT:-8502}:8501"
     depends_on:
-      db:
-        condition: service_healthy
+      admin:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   keycloak:

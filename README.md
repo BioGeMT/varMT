@@ -30,7 +30,8 @@ Set the values in `.env` (not tracked by Git):
 
 | Variable | Purpose |
 |---|---|
-| `POSTGRES_PASSWORD` | Password of the VarMT database |
+| `POSTGRES_PASSWORD` | Password of the VarMT database's admin user (`postgres`) |
+| `VARMT_READER_PASSWORD` | Password of the read-only `varmt_reader` user the web app connects as |
 | `VARMT_PORT` | Host port for the UI (default 8502) |
 | `KEYCLOAK_DB_PASSWORD` | Password of Keycloak's database |
 | `KEYCLOAK_ADMIN_USERNAME` / `KEYCLOAK_ADMIN_PASSWORD` | First Keycloak administrator |
@@ -53,14 +54,16 @@ docker compose up -d --build
 ```
 
 - The database is stored in the `varmt-db` named volume, so it survives container restarts and rebuilds
-- On first start, PostgreSQL creates the `varmt` database; the app creates the tables on every start if they are missing
-- The database is only reachable from the `app` container, not from the host
+- On first start, PostgreSQL creates the `varmt` database
+- Before the app starts, the one-off `admin` service creates any missing tables and the read-only `varmt_reader` user (setting its password from `.env`), then exits. `docker compose ps -a` shows it as `Exited (0)`; that is expected
+- The web app connects as `varmt_reader`, which can only read the tables. The `postgres` password is only given to the `db` and `admin` containers, never to the app
+- The database is only reachable from the containers, not from the host
 - Keycloak runs in development mode (plain HTTP) and stores its data in the `keycloak-db` volume. Its admin console is at [http://localhost:8180](http://localhost:8180), reachable from this machine only
 - On first start, Keycloak creates the `varmt` realm (VarMT's users and login settings) from `docker/keycloak/varmt-realm.json`. See [Keycloak realm](#keycloak-realm)
 
 Stop with `docker compose down` (add `-v` only if you want to delete the database volumes, including all Keycloak accounts).
 
-Run `docker compose up -d --build` again after changing `src/`, `docker/start.sh`, `docker/helpers.sh`, `environment.txt` or the `Dockerfile`; changes to `.env` or `docker-compose.yml` only need `docker compose up -d`.
+Run `docker compose up -d --build` again after changing `src/`, anything in `docker/` except the Keycloak realm, `environment.txt` or the `Dockerfile`; changes to `.env` or `docker-compose.yml` only need `docker compose up -d`.
 
 ### 3. Ingest a VCF file
 
@@ -68,7 +71,7 @@ Run `docker compose up -d --build` again after changing `src/`, `docker/start.sh
 ./docker/ingest.sh /path/to/your.vcf
 ```
 
-The script copies the VCF into the container and runs the ingestion. Each call adds a new collection — run it once per VCF file.
+The script runs the ingestion in a temporary `admin` container (`docker compose run --rm admin ...`), with the VCF mounted read-only. Each call adds a new collection — run it once per VCF file.
 
 ### 4. Create indexes (one-time, after first ingestion)
 
@@ -76,7 +79,7 @@ The script copies the VCF into the container and runs the ingestion. Each call a
 ./docker/indexing.sh
 ```
 
-Creates the indexes that make queries fast on large datasets. Only needs to be run once; PostgreSQL maintains the indexes automatically for subsequent ingestions.
+Runs in a temporary `admin` container, like ingestion. Creates the indexes that make queries fast on large datasets. Only needs to be run once; PostgreSQL maintains the indexes automatically for subsequent ingestions.
 
 ### 5. Open the web UI
 
@@ -192,7 +195,7 @@ The `redirect_uri` must be one of the `varmt` client's valid redirect URIs in Ke
 
 ## CLI Reference
 
-These arguments apply to both the Docker workflow (when calling `vcf2db.py` via `docker exec`) and manual installation.
+These arguments apply to both the Docker workflow (when calling `vcf2db.py` via `docker compose run --rm admin`) and manual installation.
 
 **Database Connection:**
 - `-d, --database`: PostgreSQL database name (required)
@@ -248,11 +251,13 @@ varMT/
 ├── Dockerfile                   # App container definition
 ├── environment.txt              # Python dependencies (Docker build and manual install)
 ├── docker/
-│   ├── start.sh                 # App startup: write login settings, create missing tables, run Streamlit
+│   ├── start.sh                 # App startup: write login settings, run Streamlit
+│   ├── db_init.sh               # admin service: create missing tables and the reader user
+│   ├── create_reader_role.py    # Create/update the read-only varmt_reader user
 │   ├── helpers.sh               # Shell functions used by start.sh (writes secrets.toml)
-│   ├── db_connection.yml        # In-container Streamlit DB config (host: db)
-│   ├── ingest.sh                # Wrapper: docker cp VCF + run vcf2db.py
-│   ├── indexing.sh              # Wrapper: run vcf2db.py -x for indexing
+│   ├── db_connection.yml        # In-container Streamlit DB config (host: db, user: varmt_reader)
+│   ├── ingest.sh                # Wrapper: run vcf2db.py -i in a temporary admin container
+│   ├── indexing.sh              # Wrapper: run vcf2db.py -x in a temporary admin container
 │   └── keycloak/
 │       └── varmt-realm.json     # Keycloak realm imported on first start
 ├── src/
@@ -285,7 +290,7 @@ varMT/
 ## Troubleshooting
 
 - **Port already in use** when starting the containers: another service is bound to the host port. Set a different `VARMT_PORT` in `.env` (e.g. `8503`).
-- **Streamlit shows "connection failed"**: ensure both containers are running (`docker compose ps`) and that `POSTGRES_PASSWORD` in `.env` has not changed since the database volume was created (PostgreSQL only reads it on first initialization).
+- **Streamlit shows "connection failed"**: ensure the containers are running and that `admin` exited with 0 (`docker compose ps -a`, `docker compose logs admin`), and that `POSTGRES_PASSWORD` in `.env` has not changed since the database volume was created (PostgreSQL only reads it on first initialization).
 
 ## Sample Data
 

@@ -8,8 +8,7 @@ if [ -z "$1" ]; then
 fi
 
 VCF_NAME=$(basename "$1")
-trap 'docker exec varmt-app rm -f /tmp/'"$VCF_NAME"' 2>/dev/null' EXIT
 
-docker cp "$1" varmt-app:/tmp/"$VCF_NAME"
-docker exec varmt-app python3 /app/src/vcf2db.py \
-    -d varmt -u postgres -l db -i -v /tmp/"$VCF_NAME"
+docker compose -f "$(dirname "$0")/../docker-compose.yml" run --rm \
+    -v "$(realpath "$1")":/tmp/"$VCF_NAME":ro admin \
+    python3 /app/src/vcf2db.py -d varmt -u postgres -l db -i -v /tmp/"$VCF_NAME"

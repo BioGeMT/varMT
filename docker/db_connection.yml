@@ -1,5 +1,5 @@
 database:
-  username: postgres
+  username: varmt_reader
   password:
   host: db
   port: 5432

@@ -1,3 +1,5 @@
+from contextlib import closing
+
 import streamlit as st
 from streamlit_searchbox import st_searchbox
 import pandas as pd
@@ -8,6 +10,7 @@ from utils.csv_parser import validate_csv_columns, get_required_columns, validat
 from utils.browser_policy import MAX_QUERY_BASES, MIN_MAF
 from utils.query_limits import validate_query_window
 from utils.auth import auth_sidebar, require_login
+from utils.query_log import rate_limit_message, log_query
 
 st.set_page_config(page_title="Advanced Variant Search", layout="wide")
 
@@ -250,11 +253,32 @@ if search_button:
             st.session_state.pop('search_summary', None)
             st.stop()
 
+    # Window recorded in the search log
+    if use_csv_search:
+        search = ('csv', str(csv_df['chromosome'].iloc[0]).strip(),
+                  int(csv_df['start_position'].min()), int(csv_df['end_position'].max()), None)
+    else:
+        search = ('manual', *validate_query_window(chromosome, start_pos, end_pos, limit=MAX_QUERY_BASES),
+                  gene_symbol.strip() if gene_symbol and gene_symbol.strip() else None)
+
+    with closing(db.raw_connection()) as log_conn:
+        limit_message = rate_limit_message(log_conn, st.user.sub)
+        if limit_message:
+            log_query(log_conn, st.user.sub, *search, allowed=False)
+            st.error(limit_message)
+            st.session_state.pop('search_results', None)
+            st.session_state.pop('search_summary', None)
+            st.stop()
+
     if use_csv_search or (gene_symbol and gene_symbol.strip()) or chromosome or start_pos is not None or end_pos is not None:
         try:
             with st.spinner("Searching database..."):
                 query, params = build_query_and_params(use_csv=use_csv_search)
                 results = db.execute_query_with_params(query, params) if params else db.execute_query(query)
+
+            variant_count = len(results.drop_duplicates(subset=['chromosome', 'position', 'reference_allele', 'alternate_allele']))
+            with closing(db.raw_connection()) as log_conn:
+                log_query(log_conn, st.user.sub, *search, allowed=True, result_count=variant_count)
 
             if len(results) == 0:
                 st.warning(f"No common variants (MAF ≥ {min_maf_label}) to display for this search. Rarer variants are not shown and may still be present in DwarnaBio.")

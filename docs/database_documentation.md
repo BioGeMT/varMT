@@ -77,6 +77,22 @@ Junction table that connects genes to genomic positions.
 | gene_id | integer | Foreign key to genes table |
 | variant_location_id | integer | Foreign key to positions table |
 
+### 7. query_log
+Records every search made on the web interface, for auditing and per-user rate limits. Not linked to the variant tables.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | bigint | Primary key |
+| queried_at | timestamptz | Time of the search |
+| user_id | text | Keycloak user id (`sub`) of the logged-in user |
+| search_type | text | `manual` or `csv` |
+| chromosome | text | Chromosome searched |
+| start_position | integer | Start of the searched window |
+| end_position | integer | End of the searched window |
+| gene_symbol | text | Gene filter, if any (manual searches only) |
+| allowed | boolean | False if the search was blocked by a rate limit |
+| result_count | integer | Number of variants returned (empty for blocked searches) |
+
 ## Relationship Explanations
 
 ### variant_locations ↔ variants (1:N)

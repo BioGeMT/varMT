@@ -18,6 +18,7 @@ with conn.cursor() as cur:
     cur.execute("GRANT CONNECT ON DATABASE varmt TO varmt_reader")
     cur.execute("GRANT USAGE ON SCHEMA public TO varmt_reader")
     cur.execute("GRANT SELECT ON ALL TABLES IN SCHEMA public TO varmt_reader")
+    cur.execute("GRANT INSERT ON query_log TO varmt_reader") # can only write to query_log table
     # Tables created later by postgres are readable too
     cur.execute("ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO varmt_reader")
 conn.close()

@@ -7,12 +7,14 @@ import yaml
 
 
 POLICY_PATH = Path(__file__).resolve().parents[2] / 'config' / 'browser_policy.yml'
+RATE_LIMIT_KEYS = ('per_minute', 'per_day', 'per_month')
 
 
 @dataclass(frozen=True)
 class BrowserPolicy:
     max_interval_bases: int
     min_maf: float
+    rate_limits: dict[str, int]
 
 
 def load_browser_policy(path: Path = POLICY_PATH) -> BrowserPolicy:
@@ -31,9 +33,22 @@ def load_browser_policy(path: Path = POLICY_PATH) -> BrowserPolicy:
     min_maf = query.get('min_maf')
     if isinstance(min_maf, bool) or not isinstance(min_maf, (int, float)) or not 0 < min_maf <= 0.5:
         raise ValueError(f"{path}: query.min_maf must be a number greater than 0 and at most 0.5.")
-    return BrowserPolicy(max_interval_bases=limit, min_maf=float(min_maf))
+
+    rate_limits = settings.get('rate_limits')
+    if not isinstance(rate_limits, dict):
+        raise ValueError(f"{path}: rate_limits must define {', '.join(RATE_LIMIT_KEYS)}.")
+    for key in RATE_LIMIT_KEYS:
+        value = rate_limits.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{path}: rate_limits.{key} must be a positive integer.")
+    return BrowserPolicy(
+        max_interval_bases=limit,
+        min_maf=float(min_maf),
+        rate_limits={key: rate_limits[key] for key in RATE_LIMIT_KEYS},
+    )
 
 
 _policy = load_browser_policy()
 MAX_QUERY_BASES = _policy.max_interval_bases
 MIN_MAF = _policy.min_maf
+RATE_LIMITS = _policy.rate_limits

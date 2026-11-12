@@ -12,10 +12,29 @@ from utils.browser_policy import load_browser_policy, POLICY_PATH
 
 class TestBrowserPolicy(unittest.TestCase):
     def test_load_custom_values(self):
-        with patch.object(Path, 'open', mock_open(read_data='query:\n  max_interval_bases: 10000\n  min_maf: 0.1\n')):
+        document = (
+            'query:\n  max_interval_bases: 10000\n  min_maf: 0.1\n'
+            'rate_limits:\n  per_minute: 5\n  per_day: 50\n  per_month: 500\n'
+        )
+        with patch.object(Path, 'open', mock_open(read_data=document)):
             policy = load_browser_policy()
         self.assertEqual(policy.max_interval_bases, 10000)
         self.assertEqual(policy.min_maf, 0.1)
+        self.assertEqual(policy.rate_limits, {'per_minute': 5, 'per_day': 50, 'per_month': 500})
+
+    def test_reject_invalid_or_missing_rate_limits(self):
+        query = 'query: {max_interval_bases: 5000, min_maf: 0.05}\n'
+        for limits in [
+            '',
+            'rate_limits: []',
+            'rate_limits: {per_minute: 10, per_day: 200}',
+            'rate_limits: {per_minute: 0, per_day: 200, per_month: 2000}',
+            'rate_limits: {per_minute: 10, per_day: true, per_month: 2000}',
+            'rate_limits: {per_minute: 10, per_day: 200, per_month: "2000"}',
+        ]:
+            with self.subTest(limits=limits), patch.object(Path, 'open', mock_open(read_data=query + limits)):
+                with self.assertRaisesRegex(ValueError, 'rate_limits'):
+                    load_browser_policy()
 
     def test_reject_invalid_or_missing_min_maf(self):
         for value in ['', 'min_maf: 0', 'min_maf: -0.05', 'min_maf: 0.6', 'min_maf: true', 'min_maf: "0.05"']:
@@ -53,3 +72,4 @@ class TestBrowserPolicy(unittest.TestCase):
         policy = load_browser_policy()
         self.assertGreater(policy.max_interval_bases, 0)
         self.assertTrue(0 < policy.min_maf <= 0.5)
+        self.assertEqual(set(policy.rate_limits), {'per_minute', 'per_day', 'per_month'})

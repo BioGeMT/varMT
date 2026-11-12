@@ -37,6 +37,10 @@ class DatabaseClient:
 
         return create_engine(connection_string)
 
+    def raw_connection(self):
+        """Return an uncached DB-API connection, for writes and reads that must be current."""
+        return self.get_connection().raw_connection()
+
     @st.cache_data
     def execute_query(_self, query: str) -> pd.DataFrame:
         """

@@ -1,3 +1,9 @@
 query:
   max_interval_bases: 5000
   min_maf: 0.05
+
+# Searches allowed per user
+rate_limits:
+  per_minute: 10
+  per_day: 200
+  per_month: 2000

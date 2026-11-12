@@ -131,6 +131,22 @@ def create_tables(dbname: str, user: str, password: str, host: str) -> None:
             );
             """)
 
+    cur.execute("""
+            CREATE TABLE IF NOT EXISTS query_log(
+                id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                queried_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                user_id TEXT NOT NULL,
+                search_type TEXT NOT NULL,
+                chromosome TEXT NOT NULL,
+                start_position INTEGER NOT NULL,
+                end_position INTEGER NOT NULL,
+                gene_symbol TEXT,
+                allowed BOOLEAN NOT NULL,
+                result_count INTEGER
+            );
+            CREATE INDEX IF NOT EXISTS query_log_user_time ON query_log (user_id, queried_at);
+            """)
+
     conn.commit()
     cur.close()
     conn.close()

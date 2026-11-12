@@ -31,7 +31,7 @@ Set the values in `.env` (not tracked by Git):
 | Variable | Purpose |
 |---|---|
 | `POSTGRES_PASSWORD` | Password of the VarMT database's admin user (`postgres`) |
-| `VARMT_READER_PASSWORD` | Password of the read-only `varmt_reader` user the web app connects as |
+| `VARMT_READER_PASSWORD` | Password of the `varmt_reader` user the web app connects as (read-only, except for adding search log rows) |
 | `VARMT_PORT` | Host port for the UI (default 8502) |
 | `KEYCLOAK_DB_PASSWORD` | Password of Keycloak's database |
 | `KEYCLOAK_ADMIN_USERNAME` / `KEYCLOAK_ADMIN_PASSWORD` | First Keycloak administrator |
@@ -56,7 +56,7 @@ docker compose up -d --build
 - The database is stored in the `varmt-db` named volume, so it survives container restarts and rebuilds
 - On first start, PostgreSQL creates the `varmt` database
 - Before the app starts, the one-off `admin` service creates any missing tables and the read-only `varmt_reader` user (setting its password from `.env`), then exits. `docker compose ps -a` shows it as `Exited (0)`; that is expected
-- The web app connects as `varmt_reader`, which can only read the tables. The `postgres` password is only given to the `db` and `admin` containers, never to the app
+- The web app connects as `varmt_reader`, which can only read the tables and add rows to the search log (`query_log`). The `postgres` password is only given to the `db` and `admin` containers, never to the app
 - The database is only reachable from the containers, not from the host
 - Keycloak runs in development mode (plain HTTP) and stores its data in the `keycloak-db` volume. Its admin console is at [http://localhost:8180](http://localhost:8180), reachable from this machine only
 - On first start, Keycloak creates the `varmt` realm (VarMT's users and login settings) from `docker/keycloak/varmt-realm.json`. See [Keycloak realm](#keycloak-realm)
@@ -107,6 +107,28 @@ query:
 
 Restart Streamlit after changing it. For Docker, run `docker compose up -d --build`;
 the database volume is kept.
+
+### Search log and rate limits
+
+Every search on Advanced Search is recorded in the `query_log` table: time, the user's Keycloak id (`sub`, not the email), search type (manual or CSV), chromosome, start, end, gene, whether it was allowed, and the number of variants returned. The app can add rows but cannot change or delete them.
+
+Before each search, the app counts the user's allowed searches in rolling windows and blocks the search if a limit is reached. Blocked attempts are logged too but do not count toward the limits. The limits are set in `config/browser_policy.yml`:
+
+```yaml
+rate_limits:
+  per_minute: 10   # last minute
+  per_day: 200     # last 24 hours
+  per_month: 2000  # last 30 days
+```
+
+To review the log, for example one user's searches or the most active users this week:
+
+```bash
+docker exec varmt-db-1 psql -U postgres -d varmt -c "SELECT queried_at, chromosome, start_position, end_position, gene_symbol, allowed, result_count FROM query_log WHERE user_id = '<sub>' ORDER BY queried_at DESC LIMIT 50"
+docker exec varmt-db-1 psql -U postgres -d varmt -c "SELECT user_id, count(*) FROM query_log WHERE queried_at > now() - interval '7 days' GROUP BY user_id ORDER BY count DESC"
+```
+
+A user's `sub` is the *ID* shown in the Keycloak admin console (*varmt realm → Users → user*).
 
 ### Adding more collections
 
@@ -253,7 +275,7 @@ varMT/
 ├── docker/
 │   ├── start.sh                 # App startup: write login settings, run Streamlit
 │   ├── db_init.sh               # admin service: create missing tables and the reader user
-│   ├── create_reader_role.py    # Create/update the read-only varmt_reader user
+│   ├── create_reader_role.py    # Create/update the varmt_reader user and its grants
 │   ├── helpers.sh               # Shell functions used by start.sh (writes secrets.toml)
 │   ├── db_connection.yml        # In-container Streamlit DB config (host: db, user: varmt_reader)
 │   ├── ingest.sh                # Wrapper: run vcf2db.py -i in a temporary admin container
@@ -267,16 +289,18 @@ varMT/
 │   ├── pages/
 │   │   └── 1_Advanced_Search.py # Advanced gene search page
 │   ├── queries/
-│   │   └── variant_queries.py   # Centralized SQL queries
+│   │   ├── variant_queries.py   # Centralized SQL queries
+│   │   └── query_log_queries.py # SQL for the search log and rate limits
 │   └── utils/
 │       ├── auth.py              # Login/logout sidebar and login requirement
 │       ├── db_utils.py          # Database utility functions
+│       ├── query_log.py         # Search logging and per-user rate limits
 │       ├── streamlit_db.py      # DatabaseClient for Streamlit queries
 │       ├── vep_utils.py         # VEP annotation parsing utilities
 │       ├── csv_parser.py        # CSV/gene mapping file parser
 │       └── setup_logging.py     # Logging configuration
 ├── config/
-│   ├── browser_policy.yml       # Shared browser query limit (tracked)
+│   ├── browser_policy.yml       # Query window, MAF threshold and rate limits (tracked)
 │   └── db_connection.yml        # Local Streamlit DB config (not tracked)
 ├── tests/                       # Pytest suite
 ├── res/

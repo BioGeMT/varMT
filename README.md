@@ -314,8 +314,9 @@ varMT/
 │   └── db_connection.yml        # Local Streamlit DB config (not tracked)
 ├── tests/                       # Pytest suite
 ├── res/
+│   ├── make_sample_vcf.sh       # Rebuilds the sample VCF (download + VEP)
 │   └── data/
-│       └── subset_hg19.vcf      # Sample VCF file
+│       └── subset_grch38.vep.vcf # Sample VCF, GRCh38, VEP-annotated
 └── docs/
     ├── database_documentation.md
     └── ERschema.png
@@ -328,4 +329,4 @@ varMT/
 
 ## Sample Data
 
-The sample dataset provided (`res/data/subset_hg19.vcf`) is publicly available (source [1000 Genomes Project](http://www.internationalgenome.org/)).
+`res/data/subset_grch38.vep.vcf` holds 6 [1000 Genomes](http://www.internationalgenome.org/) samples (GRCh38, region `19:400000-500000`), annotated with Ensembl VEP. Ingest it with `./docker/ingest.sh res/data/subset_grch38.vep.vcf`; `./res/make_sample_vcf.sh` rebuilds it.

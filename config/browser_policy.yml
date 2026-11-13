@@ -1,6 +1,9 @@
 query:
   max_interval_bases: 5000
   min_maf: 0.05
+  # Alternate allele frequency bins shown instead of exact frequencies.
+  # Bin edges: the first must equal min_maf and the last 1 - min_maf; the last bin includes its upper edge.
+  frequency_bins: [0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.95]
 
 # Searches allowed per user
 rate_limits:

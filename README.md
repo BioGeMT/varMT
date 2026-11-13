@@ -98,12 +98,21 @@ of at most 5,000 bases (`end - start + 1`). Gene symbols and CSV rsIDs only narr
 that interval. CSV rows must all fit within one 5 kb window on the same chromosome;
 unbounded gene searches and searches spanning multiple windows are rejected.
 
-The shared limit is configured in `config/browser_policy.yml`:
+Only variants with a minor allele frequency of at least `min_maf` (5%) are shown. Their alternate
+allele frequency is shown as a bin (for example `20% to <30%`), never as an exact value, and the
+*Alt Frequency* filter selects whole bins. The bins mirror around 50%, so `90% to 95%` for the
+alternate allele corresponds to a minor allele frequency of 5% to 10%.
+
+These settings are configured in `config/browser_policy.yml`:
 
 ```yaml
 query:
   max_interval_bases: 5000
+  min_maf: 0.05
+  frequency_bins: [0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.95]
 ```
+
+`frequency_bins` lists the bin edges; the first must equal `min_maf` and the last `1 - min_maf`.
 
 Restart Streamlit after changing it. For Docker, run `docker compose up -d --build`;
 the database volume is kept.
@@ -295,12 +304,13 @@ varMT/
 │       ├── auth.py              # Login/logout sidebar and login requirement
 │       ├── db_utils.py          # Database utility functions
 │       ├── query_log.py         # Search logging and per-user rate limits
+│       ├── frequency_bins.py    # Frequency bins shown instead of exact frequencies
 │       ├── streamlit_db.py      # DatabaseClient for Streamlit queries
 │       ├── vep_utils.py         # VEP annotation parsing utilities
 │       ├── csv_parser.py        # CSV/gene mapping file parser
 │       └── setup_logging.py     # Logging configuration
 ├── config/
-│   ├── browser_policy.yml       # Query window, MAF threshold and rate limits (tracked)
+│   ├── browser_policy.yml       # Query window, MAF threshold, frequency bins and rate limits (tracked)
 │   └── db_connection.yml        # Local Streamlit DB config (not tracked)
 ├── tests/                       # Pytest suite
 ├── res/

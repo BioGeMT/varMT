@@ -3,6 +3,17 @@ SQL queries for variant analysis.
 Centralized location for all database queries.
 """
 
+def frequency_bin_filter(upper_inclusive: bool):
+    """
+    Optional {freq_filter} for get_variants_advanced_search: keep variants whose displayed
+    alternate allele frequency falls between two bin edges. Uses the same rounding as the
+    displayed frequency, so filter and bins always agree.
+
+    Parameter order: lower edge, upper edge.
+    """
+    upper = "<=" if upper_inclusive else "<"
+    return f"AND ROUND(b.af_max, 4) >= %s AND ROUND(b.af_max, 4) {upper} %s"
+
 def get_variants_advanced_search():
     """
     Advanced search for variants by gene symbol and/or chromosomal position range.

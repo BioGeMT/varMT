@@ -14,7 +14,7 @@ from utils.db_utils import (
     insert_variant_vep_annotation,
 )
 
-from queries.variant_queries import get_variants_advanced_search
+from queries.variant_queries import get_variants_advanced_search, frequency_bin_filter
 
 MIN_MAF = 0.05  # Fixed test policy, independent of deployment configuration.
 
@@ -108,8 +108,19 @@ def test_user_frequency_filter_narrows_released_variants(db_conn):
     for pos, ac in [(600, 20), (601, 100)]:  # 10%, 50%
         _frequency(cur, _variant(cur, pos), collection, ac, 200)
 
-    results = _search(cur, freq_filter="AND b.af_max BETWEEN %s AND %s", freq_params=(0.4, 0.6))
+    results = _search(cur, freq_filter=frequency_bin_filter(upper_inclusive=False), freq_params=(0.4, 0.6))
     assert sorted(results) == [601]
+
+
+def test_bin_filter_edges(db_conn):
+    cur = db_conn.cursor()
+    collection = _collection(cur, 100)
+    for pos, ac in [(610, 80), (611, 120), (612, 190)]:  # 40%, 60%, 95%
+        _frequency(cur, _variant(cur, pos), collection, ac, 200)
+
+    # Lower edge included, upper edge excluded, except for the last bin
+    assert sorted(_search(cur, freq_filter=frequency_bin_filter(False), freq_params=(0.4, 0.6))) == [610]
+    assert sorted(_search(cur, freq_filter=frequency_bin_filter(True), freq_params=(0.9, 0.95))) == [612]
 
 
 def test_min_maf_parameter_is_respected(db_conn):

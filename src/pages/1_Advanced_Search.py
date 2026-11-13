@@ -5,12 +5,13 @@ from streamlit_searchbox import st_searchbox
 import pandas as pd
 
 from utils.streamlit_db import DatabaseClient
-from queries.variant_queries import get_variants_advanced_search
+from queries.variant_queries import get_variants_advanced_search, frequency_bin_filter
 from utils.csv_parser import validate_csv_columns, get_required_columns, validate_csv_data, build_query_conditions
 from utils.browser_policy import MAX_QUERY_BASES, MIN_MAF
 from utils.query_limits import validate_query_window
 from utils.auth import auth_sidebar, require_login
 from utils.query_log import rate_limit_message, log_query
+from utils.frequency_bins import frequency_bins, frequency_bin, bin_range
 
 st.set_page_config(page_title="Advanced Variant Search", layout="wide")
 
@@ -165,27 +166,12 @@ with col2:
         key="gene_searchbox"
     )
     with st.expander("Advanced Filters (Optional)", expanded=False):
-        freq_col1, freq_col2 = st.columns(2)
-
-        with freq_col1:
-            min_alt_freq = st.number_input(
-                "Min Alt Frequency",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.0,
-                step=0.01,
-                format="%.3f"
-            )
-
-        with freq_col2:
-            max_alt_freq = st.number_input(
-                "Max Alt Frequency",
-                min_value=0.0,
-                max_value=1.0,
-                value=1.0,
-                step=0.01,
-                format="%.3f"
-            )
+        bin_labels = [label for _, _, label in frequency_bins()]
+        first_bin, last_bin = st.select_slider(
+            "Alt Frequency",
+            options=bin_labels,
+            value=(bin_labels[0], bin_labels[-1]),
+        )
 
 st.info(f"Every search requires a chromosome and a start/end interval of at most {MAX_QUERY_BASES:,} bases ({query_limit_label}), inclusive. A gene symbol optionally narrows that interval.")
 
@@ -222,11 +208,12 @@ def build_query_and_params(use_csv=False):
     # Mandatory release rule: placeholders follow the WHERE clause in the template
     params.extend([MIN_MAF, MIN_MAF])
 
-    # Frequency filters (optional - only applied if user changes defaults)
+    # Frequency filter on whole bins (optional - only applied if user narrows the range)
     freq_filter = ""
-    if min_alt_freq > 0.0 or max_alt_freq < 1.0:
-        freq_filter = "AND b.af_max BETWEEN %s AND %s"
-        params.extend([min_alt_freq, max_alt_freq])
+    if (first_bin, last_bin) != (bin_labels[0], bin_labels[-1]):
+        lower, upper, upper_inclusive = bin_range(first_bin, last_bin)
+        freq_filter = frequency_bin_filter(upper_inclusive)
+        params.extend([lower, upper])
 
     where_clause = "WHERE " + " AND ".join(where_parts) if where_parts else ""
     final_query = base_query.format(where_clause=where_clause, freq_filter=freq_filter)
@@ -298,7 +285,7 @@ if search_button:
                 # Build one-row-per-variant summary dataframe
                 summary = (
                     results
-                    .drop(columns=annotation_cols)
+                    .drop(columns=annotation_cols + ['ref_allele_freq'])
                     .drop_duplicates(subset=['chromosome', 'position', 'reference_allele', 'alternate_allele'])
                     .reset_index(drop=True)
                 )
@@ -312,10 +299,10 @@ if search_button:
                 summary = summary.rename(columns={
                     'gene': 'Gene', 'chromosome': 'Chr', 'position': 'Position',
                     'reference_allele': 'Ref', 'alternate_allele': 'Alt', 'rs_id': 'RS ID',
-                    'ref_allele_freq': 'Ref Freq (MT)', 'alt_allele_freq': 'Alt Freq (MT)', 'gnomad_url': 'gnomAD',
+                    'alt_allele_freq': 'Alt Freq (MT)', 'gnomad_url': 'gnomAD',
                 })
-                for col in ['Ref Freq (MT)', 'Alt Freq (MT)']:
-                    summary[col] = summary[col].apply(lambda x: f"{float(x):.2f}" if pd.notna(x) else None)
+                # Only the bin leaves the server; exact frequencies are never displayed
+                summary['Alt Freq (MT)'] = summary['Alt Freq (MT)'].apply(lambda x: frequency_bin(float(x)))
 
                 # Store in session state so reruns (from row selection) can access them
                 st.session_state['search_results'] = results

@@ -13,17 +13,34 @@ from utils.browser_policy import load_browser_policy, POLICY_PATH
 class TestBrowserPolicy(unittest.TestCase):
     def test_load_custom_values(self):
         document = (
-            'query:\n  max_interval_bases: 10000\n  min_maf: 0.1\n'
+            'query:\n  max_interval_bases: 10000\n  min_maf: 0.1\n  frequency_bins: [0.1, 0.5, 0.9]\n'
             'rate_limits:\n  per_minute: 5\n  per_day: 50\n  per_month: 500\n'
         )
         with patch.object(Path, 'open', mock_open(read_data=document)):
             policy = load_browser_policy()
         self.assertEqual(policy.max_interval_bases, 10000)
         self.assertEqual(policy.min_maf, 0.1)
+        self.assertEqual(policy.frequency_bins, (0.1, 0.5, 0.9))
         self.assertEqual(policy.rate_limits, {'per_minute': 5, 'per_day': 50, 'per_month': 500})
 
+    def test_reject_invalid_or_missing_frequency_bins(self):
+        for bins in [
+            '',
+            ', frequency_bins: [0.05]',
+            ', frequency_bins: [0.1, 0.5, 0.95]',
+            ', frequency_bins: [0.05, 0.5, 0.9]',
+            ', frequency_bins: [0.05, 0.5, 0.5, 0.95]',
+            ', frequency_bins: [0.05, 0.6, 0.4, 0.95]',
+            ', frequency_bins: [0.05, true, 0.95]',
+            ', frequency_bins: [0.05, "0.5", 0.95]',
+        ]:
+            document = f'query: {{max_interval_bases: 5000, min_maf: 0.05{bins}}}'
+            with self.subTest(document=document), patch.object(Path, 'open', mock_open(read_data=document)):
+                with self.assertRaisesRegex(ValueError, 'frequency_bins'):
+                    load_browser_policy()
+
     def test_reject_invalid_or_missing_rate_limits(self):
-        query = 'query: {max_interval_bases: 5000, min_maf: 0.05}\n'
+        query = 'query: {max_interval_bases: 5000, min_maf: 0.05, frequency_bins: [0.05, 0.95]}\n'
         for limits in [
             '',
             'rate_limits: []',
